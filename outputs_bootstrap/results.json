@@ -1,0 +1,107 @@
+{
+  "frames_processed": 300,
+  "elapsed_seconds": 96.98,
+  "fps_processing": 3.09,
+  "stroke_counts": {
+    "1": {
+      "left_wrist": 1,
+      "right_wrist": 1,
+      "estimated_total_strokes": 1.0
+    },
+    "2": {
+      "left_wrist": 1,
+      "right_wrist": 1,
+      "estimated_total_strokes": 1.0
+    },
+    "3": {
+      "left_wrist": 1,
+      "right_wrist": 1,
+      "estimated_total_strokes": 1.0
+    },
+    "4": {
+      "left_wrist": 0,
+      "right_wrist": 0,
+      "estimated_total_strokes": 0.0
+    },
+    "5": {
+      "left_wrist": 1,
+      "right_wrist": 1,
+      "estimated_total_strokes": 1.0
+    },
+    "16": {
+      "left_wrist": 1,
+      "right_wrist": 1,
+      "estimated_total_strokes": 1.0
+    },
+    "17": {
+      "left_wrist": 0,
+      "right_wrist": 0,
+      "estimated_total_strokes": 0.0
+    },
+    "25": {
+      "left_wrist": 0,
+      "right_wrist": 0,
+      "estimated_total_strokes": 0.0
+    },
+    "22": {
+      "left_wrist": 1,
+      "right_wrist": 1,
+      "estimated_total_strokes": 1.0
+    },
+    "39": {
+      "left_wrist": 1,
+      "right_wrist": 1,
+      "estimated_total_strokes": 1.0
+    },
+    "51": {
+      "left_wrist": 1,
+      "right_wrist": 1,
+      "estimated_total_strokes": 1.0
+    },
+    "55": {
+      "left_wrist": 0,
+      "right_wrist": 0,
+      "estimated_total_strokes": 0.0
+    },
+    "63": {
+      "left_wrist": 1,
+      "right_wrist": 1,
+      "estimated_total_strokes": 1.0
+    },
+    "64": {
+      "left_wrist": 1,
+      "right_wrist": 1,
+      "estimated_total_strokes": 1.0
+    },
+    "66": {
+      "left_wrist": 1,
+      "right_wrist": 0,
+      "estimated_total_strokes": 0.5
+    },
+    "67": {
+      "left_wrist": 0,
+      "right_wrist": 0,
+      "estimated_total_strokes": 0.0
+    },
+    "68": {
+      "left_wrist": 1,
+      "right_wrist": 1,
+      "estimated_total_strokes": 1.0
+    },
+    "76": {
+      "left_wrist": 0,
+      "right_wrist": 0,
+      "estimated_total_strokes": 0.0
+    },
+    "83": {
+      "left_wrist": 0,
+      "right_wrist": 0,
+      "estimated_total_strokes": 0.0
+    },
+    "96": {
+      "left_wrist": 1,
+      "right_wrist": 1,
+      "estimated_total_strokes": 1.0
+    }
+  }
+}

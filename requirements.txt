@@ -1,0 +1,11 @@
+ultralytics>=8.4.0
+# ByteTrack será removido do supervision em 0.31.0 (ver nota em src/tracking/tracker.py);
+# fixamos <0.31 por enquanto e reavaliamos (pacote `trackers` da Roboflow) antes de atualizar.
+supervision>=0.30.0,<0.31.0
+motmetrics>=1.4.0
+opencv-python-headless>=4.9.0
+numpy>=1.26.0
+scipy>=1.12.0
+pandas>=2.2.0
+pyyaml>=6.0
+matplotlib>=3.8.0

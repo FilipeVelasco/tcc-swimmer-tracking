@@ -1,0 +1,87 @@
+# =============================================================================
+# Config de BOOTSTRAP: pipeline em modo "real", mas usando modelos GENÉRICOS
+# (pré-treinados no COCO, classe 0 = "person") em vez do modelo próprio
+# treinado no TCC1/TCC2. Serve para validar o pipeline com vídeo real de
+# piscina ANTES de treinar (ou enquanto não se treina) um modelo específico
+# de nadador.
+#
+# Uso:
+#   1) Coloque um vídeo real de natação em data/raw/ (ex.: data/raw/piscina.mp4)
+#   2) Ajuste video.source abaixo para esse caminho
+#   3) python scripts/run_demo.py --config configs/pipeline_real_bootstrap.yaml
+#
+# Diferenças em relação a configs/pipeline.yaml (fase sintética):
+#   - mode: "real" (usa Yolo11Detector / Yolo11PoseEstimator de verdade)
+#   - detector.weights_path aponta para o YOLO11n genérico (baixa sozinho)
+#   - detector.classes = [0] -> "person" no COCO (não existe classe "swimmer"
+#     nesse modelo genérico; é a limitação esperada dessa fase)
+#   - evaluation.enabled: false -> não há ground-truth anotado para vídeo real
+#     ainda (se quiser avaliar, anote manualmente uma amostra em formato MOT
+#     e aponte evaluation.gt_path, depois ligue evaluation.enabled)
+# =============================================================================
+
+mode: "real"
+
+video:
+  source: "data/raw/piscina.mp4"   # <<< TROQUE pelo caminho do seu vídeo real
+  fps: 30                           # ajuste para o fps real do seu vídeo
+  width: 1280                       # ajuste para a resolução real do seu vídeo
+  height: 720
+
+detector:
+  weights_path: "yolo11n.pt"        # genérico (COCO); baixa automaticamente
+  conf_threshold: 0.15              # mais baixo que o padrão: recall de "person"
+                                     # em pose de natação/vista aérea tende a ser
+                                     # menor que em fotos comuns do COCO
+  iou_threshold: 0.45
+  imgsz: 640
+  device: "cpu"
+  classes: [0]                      # 0 = "person" no COCO
+
+tracker:
+  track_activation_threshold: 0.15
+  lost_track_buffer: 90
+  minimum_matching_threshold: 0.6
+  frame_rate: 30
+  reid_fallback:
+    enabled: true
+    max_lost_age_frames: 90
+    similarity_threshold: 0.65
+    histogram_bins: [8, 8, 8]
+
+pose:
+  weights_path: "yolo11n-pose.pt"   # genérico (COCO); baixa automaticamente
+  conf_threshold: 0.15
+  imgsz: 320
+  device: "cpu"
+  crop_margin: 0.25                 # margem maior: pose genérica erra mais o
+                                     # enquadramento em corpos horizontais
+
+stroke_counter:
+  keypoint_indices: [9, 10]
+  min_confidence: 0.15              # mais permissivo: pose genérica tende a
+                                     # dar confiança mais baixa nesse cenário
+  smoothing_window: 7               # mais suavização: keypoints reais são
+                                     # bem mais ruidosos que os sintéticos
+  min_peak_distance_sec: 0.4
+  min_peak_prominence: 0.05
+
+evaluation:
+  enabled: false                    # sem GT anotado para o vídeo real ainda
+  gt_path: "data/annotations/gt_real.txt"   # formato igual ao MOT sintético
+  metrics: ["mAP@0.5", "mAP@0.5:0.95", "MOTA", "IDF1", "HOTA"]
+  iou_threshold_map: 0.5
+
+roi:
+  enabled: true
+  points:
+    - [0.25, 0.15]
+    - [1.0, 0.15]
+    - [1.0, 1.0]
+    - [0.25, 1.0]                  # ex.: [[0.0, 0.3], [1.0, 0.3], [1.0, 0.9], [0.0, 0.9]]
+
+output:
+  dir: "outputs_bootstrap"
+  save_annotated_video: true
+  save_metrics_json: true
+  save_stroke_counts_csv: true

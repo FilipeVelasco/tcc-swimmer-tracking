@@ -1,0 +1,72 @@
+# =============================================================================
+# Configuração central do pipeline de detecção, rastreamento, pose e avaliação
+# de nadadores em vídeos aéreos (overhead).
+#
+# Fase atual: HIPOTÉTICA — mode: "synthetic".
+# Quando os dados reais e os pesos treinados estiverem disponíveis, basta:
+#   1) trocar mode para "real"
+#   2) apontar detector.weights_path para o .pt treinado (YOLO11)
+#   3) apontar video.source para o caminho do vídeo real
+#   4) apontar evaluation.gt_path para o ground-truth real (formato MOT)
+# Nenhuma outra mudança de código deve ser necessária.
+# =============================================================================
+
+mode: "synthetic"          # "synthetic" | "real"
+
+video:
+  source: "data/synthetic/synthetic_video.mp4"
+  fps: 30
+  width: 1280
+  height: 720
+
+detector:
+  # Modelo leve por escolha de projeto (TCC2 seguirá otimizando/quantizando).
+  weights_path: "models/yolo11n_swimmers.pt"   # pesos treinados reais (TCC1)
+  conf_threshold: 0.25
+  iou_threshold: 0.45
+  imgsz: 640
+  device: "cpu"
+  classes: [0]              # 0 = "swimmer"
+
+tracker:
+  # ByteTrack (supervision) — associação primária por movimento/IoU.
+  track_activation_threshold: 0.25
+  lost_track_buffer: 30       # frames que uma track "perdida" é mantida viva
+  minimum_matching_threshold: 0.8
+  frame_rate: 30
+  # Fallback de reassociação por embedding leve (histograma de cor HSV),
+  # conforme documentado no TCC1: usado só quando o ByteTrack não
+  # consegue casar uma detecção nova com nenhuma track ativa por IoU/movimento.
+  reid_fallback:
+    enabled: true
+    max_lost_age_frames: 90      # até quanto tempo uma track perdida pode ser "resgatada"
+    similarity_threshold: 0.65   # similaridade mínima de cosseno para reassociar
+    histogram_bins: [8, 8, 8]    # bins H, S, V
+
+pose:
+  # Mesma família do detector (ultralytics) para manter o pipeline leve e único.
+  weights_path: "yolo11n-pose.pt"
+  conf_threshold: 0.3
+  imgsz: 320
+  device: "cpu"
+  crop_margin: 0.15    # margem extra ao redor da bbox do tracker antes de rodar a pose
+
+stroke_counter:
+  # Contagem de braçadas por oscilação vertical do punho (keypoints COCO: 9=punho esq., 10=punho dir.)
+  keypoint_indices: [9, 10]
+  min_confidence: 0.3
+  smoothing_window: 5          # média móvel para suavizar ruído de keypoints
+  min_peak_distance_sec: 0.4   # distância mínima entre picos (braçadas) em segundos
+  min_peak_prominence: 0.03    # proeminência mínima do pico (fração da altura da bbox)
+
+evaluation:
+  enabled: true
+  gt_path: "data/annotations/gt_mot.txt"     # formato MOTChallenge
+  metrics: ["mAP@0.5", "mAP@0.5:0.95", "MOTA", "IDF1", "HOTA"]
+  iou_threshold_map: 0.5
+
+output:
+  dir: "outputs"
+  save_annotated_video: true
+  save_metrics_json: true
+  save_stroke_counts_csv: true
