@@ -58,8 +58,74 @@ pytest -v                                    # todos os testes
 pytest -v -m "not slow"                      # só os rápidos (sem baixar pesos extras)
 ```
 
-Saídas em `outputs/`: `annotated_output.mp4`, `results.json`, `stroke_counts.csv`,
+Saídas em `outputs/`: `annotated_output.mp4`, `results.json`, `run_config.json`, `predictions_mot.txt`, `tracks.csv`, `stroke_counts.csv`, `stroke_events.csv`,
 `plots/metrics_bar.png`, `plots/ap_curve.png`, `plots/stroke_counts.png`.
+
+Antes de rodar um vídeo real, valide os caminhos e parâmetros sem iniciar a inferência:
+
+```bash
+venv/bin/python scripts/run_demo.py \
+  --config configs/pipeline_real_bootstrap.yaml --validate-only
+```
+
+O arquivo `run_config.json` registra a configuração usada em cada execução. O bootstrap
+com `yolo11n.pt` e `yolo11n-pose.pt` valida a integração, mas não representa a avaliação
+final do TCC; depois, basta substituir os caminhos pelos pesos treinados.
+
+### Ambiente CPU e PyTorch
+
+Para este computador, use [requirements-cpu.txt](requirements-cpu.txt). O problema
+observado era a combinação de `torch 2.14.0+cpu` com o wheel CUDA de `torchvision 0.29.0`;
+o operador `torchvision::nms` não era carregado. Para recriar o ambiente CPU:
+
+```bash
+python3 -m venv venv
+venv/bin/pip install --upgrade pip
+venv/bin/pip install -r requirements-cpu.txt
+```
+
+Para corrigir o ambiente atual sem recriá-lo:
+
+```bash
+venv/bin/pip install --force-reinstall --no-deps \
+  torchvision==0.29.0+cpu \
+  --index-url https://download.pytorch.org/whl/cpu
+```
+
+Verifique o operador e a integração com:
+
+```bash
+venv/bin/python -c "import torch, torchvision; print(torch.__version__, torchvision.__version__); print(hasattr(torch.ops.torchvision, 'nms'))"
+venv/bin/python -m pytest -q
+```
+
+Para avaliar braçadas, crie `data/annotations/stroke_events_gt.csv` com o cabeçalho
+`track_id,frame_number`, usando a numeração de frames iniciada em 1. O pipeline compara
+esses eventos com tolerância configurável (`evaluation.stroke_tolerance_frames`) e salva
+MAE, precisão, recall e F1 no `results.json`.
+
+As regiões de interesse e raias usam coordenadas normalizadas entre 0 e 1. A ROI global
+fica em `roi.points`; para restringir a piscina por raia, preencha `roi.lanes` com um
+polígono por raia na configuração real. A filtragem geométrica já está disponível, mas a
+validação final da identidade entre raias depende de um trecho real anotado.
+
+Para calibrar raias em outro vídeo, use o primeiro frame estável da piscina:
+
+```bash
+venv/bin/python scripts/calibrate_lanes.py \
+  --video data/raw/video_natacao_trecho.mp4 \
+  --output data/annotations/lanes.json --lanes 8
+```
+
+Copie o campo `lanes` gerado para `roi.lanes`. Com `tracker.lane_constraint_enabled: true`,
+um ID não atravessa uma raia configurada; se o detector perder o atleta e gerar outro ID
+na mesma raia, o pipeline tenta recuperar a identidade por proximidade e aparência.
+Os campos `head_confidence`, `shoulder_confidence` e `arm_confidence` em `tracks.csv`
+permitem auditar a qualidade da pose e detectar quando cabeça ou braços estão invisíveis.
+
+Em CPU, `pose.inference_interval_frames: 3` é uma opção prática para executar pose a
+cada três frames e preservar a detecção/tracking em todos os frames. Para avaliação final
+de braçadas, use intervalo 1 ou valide que o intervalo escolhido não perde eventos.
 
 ## Decisões de projeto (por que está assim)
 

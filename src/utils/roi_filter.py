@@ -42,6 +42,37 @@ def filter_detections_by_roi(
     return detections[keep_mask]
 
 
+def filter_detections_by_lanes(
+    detections: sv.Detections,
+    lane_polygons_px: list[np.ndarray],
+) -> sv.Detections:
+    """Keep detections inside configured lanes and attach a zero-based lane ID."""
+    if len(detections) == 0 or not lane_polygons_px:
+        return detections
+
+    keep_mask = []
+    lane_ids = []
+    for x1, y1, x2, y2 in detections.xyxy:
+        cx, cy = (x1 + x2) / 2, (y1 + y2) / 2
+        lane_id = -1
+        for index, polygon in enumerate(lane_polygons_px):
+            if cv2.pointPolygonTest(polygon, (float(cx), float(cy)), False) >= 0:
+                lane_id = index
+                break
+        keep_mask.append(lane_id >= 0)
+        lane_ids.append(lane_id)
+
+    filtered = detections[np.array(keep_mask, dtype=bool)]
+    filtered.data["lane_id"] = np.asarray(lane_ids, dtype=np.int32)[np.asarray(keep_mask, dtype=bool)]
+    return filtered
+
+
+def normalized_lanes_to_pixel_polygons(
+    lanes: list[list[list[float]]], frame_w: int, frame_h: int,
+) -> list[np.ndarray]:
+    return [roi_to_pixel_polygon(lane, frame_w, frame_h) for lane in lanes]
+
+
 def draw_roi(frame: np.ndarray, roi_polygon_px: np.ndarray) -> np.ndarray:
     """Desenha o contorno da ROI no frame (útil para conferir visualmente se está bem posicionada)."""
     annotated = frame.copy()

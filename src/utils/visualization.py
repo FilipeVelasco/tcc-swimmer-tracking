@@ -34,7 +34,11 @@ def draw_frame(
             # OpenCV (cv2.putText, usado internamente pelo LabelAnnotator) não suporta
             # UTF-8 (acentos/cedilha viram '?'), então o texto do overlay fica em ASCII puro.
             # Acentuação correta é usada em todo o resto (logs, docs, comentários).
-            labels.append(f"#{int(tid)} | {strokes} strokes")
+            lane_id = -1
+            if "lane_id" in tracked.data:
+                lane_id = int(tracked.data["lane_id"][len(labels)])
+            lane_label = f" | lane {lane_id + 1}" if lane_id >= 0 else ""
+            labels.append(f"#{int(tid)}{lane_label} | {strokes} strokes")
         annotated = _box_annotator.annotate(annotated, tracked)
         annotated = _label_annotator.annotate(annotated, tracked, labels=labels)
 
@@ -57,5 +61,17 @@ def draw_frame(
             radius = 4 if kp_idx in _WRIST_INDICES else 2
             cv2.circle(annotated, (int(x), int(y)), radius, color, -1)
 
+    return annotated
+
+
+def draw_lanes(frame: np.ndarray, lane_polygons_px: list[np.ndarray]) -> np.ndarray:
+    """Draw configured lane polygons and their one-based labels."""
+    annotated = frame.copy()
+    for index, polygon in enumerate(lane_polygons_px, start=1):
+        points = polygon.astype(np.int32).reshape((-1, 1, 2))
+        cv2.polylines(annotated, [points], isClosed=True, color=(255, 180, 0), thickness=2)
+        x, y = points[:, 0, :].mean(axis=0).astype(int)
+        cv2.putText(annotated, f"lane {index}", (x, y), cv2.FONT_HERSHEY_SIMPLEX,
+                    0.6, (255, 180, 0), 2, cv2.LINE_AA)
     return annotated
 

@@ -1,0 +1,137 @@
+{
+  "frames_processed": 60,
+  "elapsed_seconds": 57.22,
+  "fps_processing": 1.05,
+  "video": {
+    "source": "data/raw/video_natacao_trecho.mp4",
+    "fps": 30,
+    "width": 640,
+    "height": 352
+  },
+  "models": {
+    "detector": "yolo11n.pt",
+    "pose": "yolo11n-pose.pt"
+  },
+  "tracking": {
+    "detections_before_filters": 808,
+    "detections_after_filters": 564,
+    "track_observations": 363,
+    "unique_track_ids": 13
+  },
+  "stroke_counts": {
+    "1": {
+      "left_wrist": 1,
+      "left_wrist_events": [
+        42
+      ],
+      "right_wrist": 1,
+      "right_wrist_events": [
+        31
+      ],
+      "estimated_total_strokes": 1.0
+    },
+    "2": {
+      "left_wrist": 1,
+      "left_wrist_events": [
+        56
+      ],
+      "right_wrist": 1,
+      "right_wrist_events": [
+        56
+      ],
+      "estimated_total_strokes": 1.0
+    },
+    "3": {
+      "left_wrist": 1,
+      "left_wrist_events": [
+        46
+      ],
+      "right_wrist": 1,
+      "right_wrist_events": [
+        55
+      ],
+      "estimated_total_strokes": 1.0
+    },
+    "4": {
+      "left_wrist": 1,
+      "left_wrist_events": [
+        56
+      ],
+      "right_wrist": 1,
+      "right_wrist_events": [
+        28,
+        34,
+        56
+      ],
+      "estimated_total_strokes": 1.0
+    },
+    "6": {
+      "left_wrist": 1,
+      "left_wrist_events": [
+        3
+      ],
+      "right_wrist": 2,
+      "right_wrist_events": [
+        3,
+        47,
+        49
+      ],
+      "estimated_total_strokes": 1.5
+    },
+    "11": {
+      "left_wrist": 0,
+      "left_wrist_events": [],
+      "right_wrist": 0,
+      "right_wrist_events": [],
+      "estimated_total_strokes": 0.0
+    },
+    "7": {
+      "left_wrist": 0,
+      "left_wrist_events": [],
+      "right_wrist": 0,
+      "right_wrist_events": [],
+      "estimated_total_strokes": 0.0
+    },
+    "8": {
+      "left_wrist": 1,
+      "left_wrist_events": [
+        32
+      ],
+      "right_wrist": 1,
+      "right_wrist_events": [
+        32
+      ],
+      "estimated_total_strokes": 1.0
+    },
+    "22": {
+      "left_wrist": 1,
+      "left_wrist_events": [
+        23
+      ],
+      "right_wrist": 1,
+      "right_wrist_events": [
+        23
+      ],
+      "estimated_total_strokes": 1.0
+    },
+    "10": {
+      "left_wrist": 1,
+      "left_wrist_events": [
+        26
+      ],
+      "right_wrist": 1,
+      "right_wrist_events": [
+        26,
+        31
+      ],
+      "estimated_total_strokes": 1.0
+    },
+    "5": {
+      "left_wrist": 0,
+      "left_wrist_events": [],
+      "right_wrist": 0,
+      "right_wrist_events": [],
+      "estimated_total_strokes": 0.0
+    }
+  }
+}

@@ -1,0 +1,6 @@
+# PyTorch CPU wheels must come from the official PyTorch index.
+--extra-index-url https://download.pytorch.org/whl/cpu
+-r requirements.txt
+
+torch==2.14.0+cpu
+torchvision==0.29.0+cpu

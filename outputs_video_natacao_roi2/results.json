@@ -1,0 +1,41 @@
+{
+  "frames_processed": 10,
+  "elapsed_seconds": 6.21,
+  "fps_processing": 1.61,
+  "video": {
+    "source": "data/raw/video_natacao_trecho.mp4",
+    "fps": 30,
+    "width": 640,
+    "height": 352
+  },
+  "models": {
+    "detector": "yolo11n.pt",
+    "pose": "yolo11n-pose.pt"
+  },
+  "tracking": {
+    "detections_before_filters": 57,
+    "detections_after_filters": 28,
+    "track_observations": 15,
+    "unique_track_ids": 3
+  },
+  "stroke_counts": {
+    "1": {
+      "left_wrist": 1,
+      "left_wrist_events": [
+        6
+      ],
+      "right_wrist": 1,
+      "right_wrist_events": [
+        6
+      ],
+      "estimated_total_strokes": 1.0
+    },
+    "3": {
+      "left_wrist": 0,
+      "left_wrist_events": [],
+      "right_wrist": 0,
+      "right_wrist_events": [],
+      "estimated_total_strokes": 0.0
+    }
+  }
+}

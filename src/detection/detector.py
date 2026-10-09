@@ -70,7 +70,16 @@ class Yolo11Detector(BaseDetector):
             device=self.config.device,
             verbose=False,
         )[0]
-        return sv.Detections.from_ultralytics(results)
+        detections = sv.Detections.from_ultralytics(results)
+        if len(detections) == 0:
+            return detections
+        height, width = frame.shape[:2]
+        boxes = detections.xyxy.copy()
+        boxes[:, [0, 2]] = np.clip(boxes[:, [0, 2]], 0, width)
+        boxes[:, [1, 3]] = np.clip(boxes[:, [1, 3]], 0, height)
+        valid = (boxes[:, 2] > boxes[:, 0]) & (boxes[:, 3] > boxes[:, 1])
+        detections.xyxy = boxes
+        return detections[valid]
 
 
 class SyntheticDetector(BaseDetector):

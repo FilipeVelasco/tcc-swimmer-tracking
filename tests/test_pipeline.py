@@ -10,6 +10,7 @@ Cobrem os pontos que mais importam para a validade dos resultados do TCC:
 from __future__ import annotations
 
 import sys
+import dataclasses
 from pathlib import Path
 
 import numpy as np
@@ -18,10 +19,10 @@ import supervision as sv
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from src.evaluation.metrics import compute_hota, compute_map, compute_mot_metrics
+from src.evaluation.metrics import compute_hota, compute_map, compute_mot_metrics, compute_stroke_metrics
 from src.pose.stroke_counter import StrokeCounter
-from src.tracking.tracker import AppearanceReID, SwimmerTracker
-from src.utils.config import PipelineConfig, StrokeCounterConfig
+from src.tracking.tracker import AppearanceReID, LaneAwareIdentity, SwimmerTracker
+from src.utils.config import PipelineConfig, StrokeCounterConfig, TrackerConfig
 
 
 @pytest.fixture(scope="module")
@@ -75,6 +76,44 @@ def test_appearance_reid_does_not_rescue_after_expiry():
     reid.mark_lost(track_id=7, embedding=emb, frame_idx=0)
     rescued = reid.try_rescue(emb, frame_idx=100)  # muito depois do max_lost_age_frames
     assert rescued is None
+
+
+def test_appearance_embedding_includes_center_region():
+    frame = _make_frame(w=100, h=80, color=(30, 80, 160))
+    embedding = AppearanceReID.compute_embedding(frame, np.array([10, 10, 50, 50]), [4, 4, 4])
+    assert embedding.shape == (2 * 4 * 4 * 4,)
+    assert np.isclose(np.linalg.norm(embedding), 1.0)
+
+
+def test_lane_constraint_breaks_impossible_cross_lane_identity():
+    identity = LaneAwareIdentity(switch_tolerance_frames=0, max_gap_frames=10, distance_factor=2.5)
+    bbox = np.array([10.0, 10.0, 30.0, 30.0])
+    first_id = identity.update(raw_id=4, lane_id=0, bbox=bbox, frame_idx=0)
+    same_id = identity.update(raw_id=4, lane_id=0, bbox=bbox, frame_idx=1)
+    crossed_id = identity.update(raw_id=4, lane_id=1, bbox=bbox, frame_idx=2)
+    assert first_id == same_id
+    assert crossed_id != first_id
+
+
+def test_lane_constraint_reassociates_new_backend_id_in_same_lane():
+    identity = LaneAwareIdentity(switch_tolerance_frames=0, max_gap_frames=10, distance_factor=2.5)
+    bbox = np.array([10.0, 10.0, 30.0, 30.0])
+    first_id = identity.update(raw_id=4, lane_id=0, bbox=bbox, frame_idx=0)
+    recovered_id = identity.update(raw_id=9, lane_id=0, bbox=bbox + 1, frame_idx=5)
+    assert recovered_id == first_id
+
+
+def test_tracker_uses_independent_backend_per_lane():
+    tracker = SwimmerTracker(TrackerConfig(lane_constraint_enabled=True))
+    detections = sv.Detections(
+        xyxy=np.array([[10, 10, 20, 20], [40, 10, 50, 20]], dtype=np.float32),
+        confidence=np.array([0.9, 0.9], dtype=np.float32),
+        class_id=np.array([0, 0]),
+    )
+    detections.data["lane_id"] = np.array([0, 1])
+    tracked = tracker.update(_make_frame(w=60, h=60), detections, frame_idx=0)
+    assert len(tracked) == 2
+    assert tracked.data["lane_id"].tolist() == [0, 1]
 
 
 # ---------------------------------------------------------------------------
@@ -148,6 +187,56 @@ def test_hota_is_one_for_perfect_tracking():
     preds = {0: [(1, 0.0, 0.0, 10.0, 10.0)], 1: [(1, 0.0, 0.0, 10.0, 10.0)]}
     result = compute_hota(preds, gt)
     assert result["HOTA"] == pytest.approx(1.0, abs=1e-6)
+
+
+def test_stroke_event_metrics_match_events_with_tolerance():
+    result = compute_stroke_metrics(
+        predicted_events={1: [10, 30], 2: [50]},
+        ground_truth_events={1: [11, 30], 2: [80]},
+        tolerance_frames=2,
+    )
+    assert result["stroke_event_TP"] == 2
+    assert result["stroke_event_FP"] == 1
+    assert result["stroke_event_FN"] == 1
+    assert result["stroke_event_F1"] == pytest.approx(2 / 3)
+
+
+def test_stroke_event_ground_truth_file_is_loaded(tmp_path, config):
+    from src.pipeline.run_pipeline import SwimmerTrackingPipeline
+
+    gt_path = tmp_path / "stroke_events_gt.csv"
+    gt_path.write_text("track_id,frame_number\n1,10\n1,30\n", encoding="utf-8")
+    run_config = dataclasses.replace(
+        config,
+        evaluation=dataclasses.replace(
+            config.evaluation,
+            enabled=True,
+            stroke_events_gt_path=str(gt_path),
+        ),
+    )
+    pipeline = SwimmerTrackingPipeline(run_config)
+    scores = pipeline._evaluate()
+    assert scores["stroke_ground_truth_total"] == 2
+
+
+def test_config_validation_rejects_invalid_roi(config):
+    invalid = dataclasses.replace(
+        config,
+        roi=dataclasses.replace(config.roi, enabled=True, points=[[0.0, 0.0], [1.2, 0.0]]),
+    )
+    with pytest.raises(ValueError, match="roi.points"):
+        invalid.validate_inputs(require_video=False, require_detector_weights=False,
+                               require_pose_weights=False)
+
+
+def test_config_validation_rejects_missing_real_video(config, tmp_path):
+    invalid = dataclasses.replace(
+        config,
+        mode="real",
+        video=dataclasses.replace(config.video, source=str(tmp_path / "missing.mp4")),
+    )
+    with pytest.raises(ValueError, match="vídeo não encontrado"):
+        invalid.validate_inputs(require_detector_weights=False, require_pose_weights=False)
 
 
 # ---------------------------------------------------------------------------

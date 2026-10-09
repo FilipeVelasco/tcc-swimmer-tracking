@@ -43,6 +43,10 @@ tracker:
   lost_track_buffer: 90
   minimum_matching_threshold: 0.6
   frame_rate: 30
+  lane_constraint_enabled: true
+  lane_switch_tolerance_frames: 3
+  lane_reassociation_max_gap_frames: 90
+  lane_reassociation_distance_factor: 2.5
   reid_fallback:
     enabled: true
     max_lost_age_frames: 90
@@ -56,6 +60,9 @@ pose:
   device: "cpu"
   crop_margin: 0.25                 # margem maior: pose genérica erra mais o
                                      # enquadramento em corpos horizontais
+  inference_interval_frames: 3
+  stale_pose_max_frames: 6
+  stale_pose_confidence_decay: 0.85
 
 stroke_counter:
   keypoint_indices: [9, 10]
@@ -65,6 +72,7 @@ stroke_counter:
                                      # bem mais ruidosos que os sintéticos
   min_peak_distance_sec: 0.4
   min_peak_prominence: 0.05
+  max_gap_frames: 5
 
 evaluation:
   enabled: false                    # sem GT anotado para o vídeo real ainda
@@ -79,6 +87,8 @@ roi:
     - [1.0, 0.15]
     - [1.0, 1.0]
     - [0.25, 1.0]                  # ex.: [[0.0, 0.3], [1.0, 0.3], [1.0, 0.9], [0.0, 0.9]]
+  # Preencha com um polígono normalizado por raia quando a câmera estiver fixa.
+  lanes: []
 
 output:
   dir: "outputs_bootstrap"

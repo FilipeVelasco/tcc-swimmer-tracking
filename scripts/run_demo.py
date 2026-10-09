@@ -31,6 +31,8 @@ def main() -> None:
                          help="Recria o vídeo e o GT sintéticos antes de rodar.")
     parser.add_argument("--max-frames", type=int, default=None,
                          help="Processa só os N primeiros frames (útil para testar rápido em máquina lenta).")
+    parser.add_argument("--validate-only", action="store_true",
+                         help="Valida vídeo, pesos e parâmetros sem executar inferência.")
     args = parser.parse_args()
 
     if args.regenerate_synthetic:
@@ -46,6 +48,18 @@ def main() -> None:
             output_gt=config.evaluation.gt_path,
             width=config.video.width, height=config.video.height, fps=config.video.fps,
         )
+
+    try:
+        config.validate_inputs()
+    except ValueError as exc:
+        raise SystemExit(f"[ERRO] {exc}") from exc
+
+    if args.validate_only:
+        print(f"Configuração válida: {args.config}")
+        print(f"Vídeo: {config.video.source}")
+        print(f"Detector: {config.detector.weights_path}")
+        print(f"Pose: {config.pose.weights_path}")
+        return
 
     pipeline = SwimmerTrackingPipeline(config)
     results = pipeline.run(max_frames=args.max_frames)

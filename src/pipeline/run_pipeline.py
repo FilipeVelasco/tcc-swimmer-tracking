@@ -10,20 +10,25 @@ diferença é a config e os arquivos de entrada; o código é o mesmo.
 from __future__ import annotations
 
 import csv
+import dataclasses
 import json
 import time
+from collections import defaultdict
 from pathlib import Path
 
 import cv2
 
 from src.detection.detector import build_detector
-from src.evaluation.metrics import compute_hota, compute_map, compute_mot_metrics
+from src.evaluation.metrics import compute_hota, compute_map, compute_mot_metrics, compute_stroke_metrics
 from src.pose.pose_estimator import build_pose_estimator
 from src.pose.stroke_counter import StrokeCounter
 from src.tracking.tracker import SwimmerTracker
 from src.utils.config import PipelineConfig
-from src.utils.roi_filter import draw_roi, filter_detections_by_roi, roi_to_pixel_polygon
-from src.utils.visualization import draw_frame
+from src.utils.roi_filter import (
+    draw_roi, filter_detections_by_lanes, filter_detections_by_roi,
+    normalized_lanes_to_pixel_polygons, roi_to_pixel_polygon,
+)
+from src.utils.visualization import draw_frame, draw_lanes
 
 
 class SwimmerTrackingPipeline:
@@ -44,6 +49,12 @@ class SwimmerTrackingPipeline:
 
         self._preds_mot: dict[int, list[tuple[int, float, float, float, float]]] = {}
         self._preds_map: dict[int, list[tuple[float, float, float, float, float]]] = {}
+        self._detection_count = 0
+        self._filtered_detection_count = 0
+        self._track_observation_count = 0
+        self._track_ids_seen: set[int] = set()
+        self._track_rows: list[dict[str, int | float]] = []
+        self._last_keypoints: dict[int, tuple[int, dict[int, tuple[float, float, float]]]] = {}
 
     def run(self, max_frames: int | None = None) -> dict:
         cap = cv2.VideoCapture(self.config.video.source)
@@ -69,9 +80,14 @@ class SwimmerTrackingPipeline:
             self.stroke_counter.fps = self.config.video.fps
 
         roi_polygon_px = None
+        lane_polygons_px = []
         if self.config.roi.enabled and self.config.roi.points:
             roi_polygon_px = roi_to_pixel_polygon(
                 self.config.roi.points, self.config.video.width, self.config.video.height
+            )
+        if self.config.roi.lanes:
+            lane_polygons_px = normalized_lanes_to_pixel_polygons(
+                self.config.roi.lanes, self.config.video.width, self.config.video.height
             )
 
         out_dir = Path(self.config.output.dir)
@@ -98,20 +114,58 @@ class SwimmerTrackingPipeline:
                 break
 
             detections = self.detector.detect(frame, frame_idx)
+            self._detection_count += len(detections)
             if roi_polygon_px is not None:
                 detections = filter_detections_by_roi(detections, roi_polygon_px)
+            if lane_polygons_px:
+                detections = filter_detections_by_lanes(detections, lane_polygons_px)
+            self._filtered_detection_count += len(detections)
             tracked = self.tracker.update(frame, detections, frame_idx)
+            self._track_observation_count += len(tracked)
+            if tracked.tracker_id is not None:
+                self._track_ids_seen.update(int(track_id) for track_id in tracked.tracker_id)
 
             keypoints_by_track = {}
             if tracked.tracker_id is not None:
-                for bbox, tid, conf in zip(tracked.xyxy, tracked.tracker_id, tracked.confidence):
+                for index, (bbox, tid, conf) in enumerate(
+                    zip(tracked.xyxy, tracked.tracker_id, tracked.confidence)
+                ):
                     tid = int(tid)
-                    kps = self.pose_estimator.estimate(frame, bbox, frame_idx, tid)
-                    self.stroke_counter.update(tid, frame_idx, kps)
+                    lane_id = -1
+                    if "lane_id" in tracked.data:
+                        lane_id = int(tracked.data["lane_id"][index])
+                    observed_kps = None
+                    if frame_idx % self.config.pose.inference_interval_frames == 0:
+                        observed_kps = self.pose_estimator.estimate(frame, bbox, frame_idx, tid)
+                    self.stroke_counter.update(tid, frame_idx, observed_kps)
+                    kps = observed_kps
+                    if kps:
+                        self._last_keypoints[tid] = (frame_idx, kps)
+                    elif tid in self._last_keypoints:
+                        last_frame, last_kps = self._last_keypoints[tid]
+                        age = frame_idx - last_frame
+                        if age <= self.config.pose.stale_pose_max_frames:
+                            decay = self.config.pose.stale_pose_confidence_decay ** age
+                            kps = {
+                                keypoint_idx: (x, y, confidence * decay)
+                                for keypoint_idx, (x, y, confidence) in last_kps.items()
+                            }
                     if kps:
                         keypoints_by_track[tid] = kps
 
                     x1, y1, x2, y2 = bbox
+                    self._track_rows.append({
+                        "frame_number": frame_idx + 1,
+                        "track_id": tid,
+                        "lane_id": lane_id + 1 if lane_id >= 0 else -1,
+                        "confidence": float(conf),
+                        "x1": float(x1), "y1": float(y1),
+                        "x2": float(x2), "y2": float(y2),
+                        "head_confidence": self._keypoint_quality(kps, [0, 1, 2, 3, 4]),
+                        "shoulder_confidence": self._keypoint_quality(kps, [5, 6]),
+                        "arm_confidence": self._keypoint_quality(kps, [7, 8, 9, 10]),
+                        "pose_observed": int(observed_kps is not None),
+                    })
                     self._preds_mot.setdefault(frame_idx, []).append((tid, x1, y1, x2, y2))
                     self._preds_map.setdefault(frame_idx, []).append((x1, y1, x2, y2, float(conf)))
 
@@ -121,6 +175,8 @@ class SwimmerTrackingPipeline:
                 )
                 if roi_polygon_px is not None:
                     annotated = draw_roi(annotated, roi_polygon_px)
+                if lane_polygons_px:
+                    annotated = draw_lanes(annotated, lane_polygons_px)
                 writer.write(annotated)
 
             frame_idx += 1
@@ -149,6 +205,22 @@ class SwimmerTrackingPipeline:
             "frames_processed": frame_idx,
             "elapsed_seconds": round(elapsed, 2),
             "fps_processing": round(frame_idx / elapsed, 2) if elapsed > 0 else None,
+            "video": {
+                "source": self.config.video.source,
+                "fps": self.config.video.fps,
+                "width": self.config.video.width,
+                "height": self.config.video.height,
+            },
+            "models": {
+                "detector": self.config.detector.weights_path,
+                "pose": self.config.pose.weights_path,
+            },
+            "tracking": {
+                "detections_before_filters": self._detection_count,
+                "detections_after_filters": self._filtered_detection_count,
+                "track_observations": self._track_observation_count,
+                "unique_track_ids": len(self._track_ids_seen),
+            },
             "stroke_counts": self.stroke_counter.summary(),
         }
 
@@ -175,17 +247,57 @@ class SwimmerTrackingPipeline:
         }
         return gt_by_frame, gt_map
 
+    @staticmethod
+    def _keypoint_quality(
+        keypoints: dict[int, tuple[float, float, float]] | None,
+        indices: list[int],
+    ) -> float:
+        if not keypoints:
+            return 0.0
+        confidences = [keypoints[index][2] for index in indices if index in keypoints]
+        return round(float(sum(confidences) / len(confidences)), 4) if confidences else 0.0
+
     def _evaluate(self) -> dict:
         gt_mot, gt_map = self._load_gt()
-        map_scores = compute_map(self._preds_map, gt_map, iou_thresholds=[0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95])
-        mot_scores = compute_mot_metrics(self._preds_mot, gt_mot)
-        hota_scores = compute_hota(self._preds_mot, gt_mot)
-        return {**map_scores, **mot_scores, **hota_scores}
+        requested = set(self.config.evaluation.metrics)
+        scores = {}
+        if not requested or any(metric.startswith("mAP") for metric in requested):
+            scores.update(compute_map(
+                self._preds_map, gt_map,
+                iou_thresholds=[0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95],
+            ))
+        if not requested or "MOTA" in requested or "IDF1" in requested:
+            scores.update(compute_mot_metrics(self._preds_mot, gt_mot))
+        if not requested or "HOTA" in requested:
+            scores.update(compute_hota(self._preds_mot, gt_mot))
+        stroke_gt_path = Path(self.config.evaluation.stroke_events_gt_path)
+        if stroke_gt_path.exists():
+            stroke_gt: dict[int, list[int]] = defaultdict(list)
+            with open(stroke_gt_path, newline="", encoding="utf-8") as f:
+                for row in csv.DictReader(f):
+                    stroke_gt[int(row["track_id"])].append(int(row["frame_number"]) - 1)
+            predicted_events = {
+                int(track_id): sorted({
+                    event_frame
+                    for wrist in ("left_wrist", "right_wrist")
+                    for event_frame in counts.get(f"{wrist}_events", [])
+                })
+                for track_id, counts in self.stroke_counter.summary().items()
+            }
+            scores.update(compute_stroke_metrics(
+                predicted_events, stroke_gt, self.config.evaluation.stroke_tolerance_frames,
+            ))
+        return scores
 
     def _save_outputs(self, results: dict, out_dir: Path) -> None:
         if self.config.output.save_metrics_json:
             with open(out_dir / "results.json", "w", encoding="utf-8") as f:
                 json.dump(results, f, indent=2, ensure_ascii=False)
+
+            # Keep the exact typed configuration beside the metrics so an
+            # experiment can be reproduced after replacing temporary weights.
+            with open(out_dir / "run_config.json", "w", encoding="utf-8") as f:
+                json.dump(dataclasses.asdict(self.config), f, indent=2, ensure_ascii=False)
 
         if self.config.output.save_stroke_counts_csv:
             with open(out_dir / "stroke_counts.csv", "w", newline="", encoding="utf-8") as f:
@@ -196,3 +308,29 @@ class SwimmerTrackingPipeline:
                         tid, counts.get("left_wrist", 0), counts.get("right_wrist", 0),
                         counts.get("estimated_total_strokes", 0),
                     ])
+
+            with open(out_dir / "stroke_events.csv", "w", newline="", encoding="utf-8") as f:
+                writer = csv.writer(f)
+                writer.writerow(["track_id", "wrist", "frame_idx_zero_based", "frame_number"])
+                for tid, counts in results["stroke_counts"].items():
+                    for wrist in ("left_wrist", "right_wrist"):
+                        for event_frame in counts.get(f"{wrist}_events", []):
+                            writer.writerow([tid, wrist, event_frame, event_frame + 1])
+
+        if self.config.output.save_mot_predictions:
+            with open(out_dir / "predictions_mot.txt", "w", encoding="utf-8") as f:
+                for frame_idx in sorted(self._preds_mot):
+                    for track_id, x1, y1, x2, y2 in self._preds_mot[frame_idx]:
+                        width, height = x2 - x1, y2 - y1
+                        f.write(
+                            f"{frame_idx + 1},{track_id},{x1:.3f},{y1:.3f},"
+                            f"{width:.3f},{height:.3f},1,-1,-1\n"
+                        )
+
+                with open(out_dir / "tracks.csv", "w", newline="", encoding="utf-8") as f:
+                    fields = ["frame_number", "track_id", "lane_id", "confidence",
+                              "x1", "y1", "x2", "y2", "head_confidence",
+                              "shoulder_confidence", "arm_confidence", "pose_observed"]
+                    writer = csv.DictWriter(f, fieldnames=fields)
+                    writer.writeheader()
+                    writer.writerows(self._track_rows)

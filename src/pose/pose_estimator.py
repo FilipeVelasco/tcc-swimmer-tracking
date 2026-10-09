@@ -70,13 +70,15 @@ class Yolo11PoseEstimator(BasePoseEstimator):
         if results.keypoints is None or len(results.keypoints) == 0:
             return None
 
-        # Se houver mais de uma pessoa na crop (raro, mas possível), pega a maior detecção
-        # (mais próxima do centro/tamanho da bbox original do tracker).
+        # Se houver mais de uma pessoa no crop, escolhe a detecção cujo centro
+        # fica mais próximo do centro da bbox que originou este crop.
         boxes = results.boxes
         best_idx = 0
         if boxes is not None and len(boxes) > 1:
-            areas = (boxes.xyxy[:, 2] - boxes.xyxy[:, 0]) * (boxes.xyxy[:, 3] - boxes.xyxy[:, 1])
-            best_idx = int(areas.argmax())
+            crop_centers = (boxes.xyxy[:, :2] + boxes.xyxy[:, 2:]) / 2
+            target_center = np.array([(x2 - x1) / 2, (y2 - y1) / 2], dtype=np.float32)
+            distances = np.sum((crop_centers.cpu().numpy() - target_center) ** 2, axis=1)
+            best_idx = int(distances.argmin())
 
         kp_xy = results.keypoints.xy[best_idx].cpu().numpy()
         kp_conf = results.keypoints.conf[best_idx].cpu().numpy() if results.keypoints.conf is not None \
@@ -84,7 +86,11 @@ class Yolo11PoseEstimator(BasePoseEstimator):
 
         keypoints = {}
         for idx, ((x, y), c) in enumerate(zip(kp_xy, kp_conf)):
-            keypoints[idx] = (float(x + cx1), float(y + cy1), float(c))
+            keypoints[idx] = (
+                float(np.clip(x + cx1, 0, w_frame - 1)),
+                float(np.clip(y + cy1, 0, h_frame - 1)),
+                float(c),
+            )
         return keypoints
 
 

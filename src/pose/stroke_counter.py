@@ -55,31 +55,43 @@ class StrokeCounter:
         kernel = np.ones(w) / w
         return np.convolve(values, kernel, mode="same")
 
-    def count_for_track(self, track_id: int) -> dict[str, int | float]:
+    def _segments(self, series: _WristSeries) -> list[tuple[np.ndarray, np.ndarray]]:
+        if not series.y_values:
+            return []
+        frame_indices = np.asarray(series.frame_indices, dtype=np.int32)
+        values = np.asarray(series.y_values, dtype=np.float64)
+        breaks = np.flatnonzero(np.diff(frame_indices) > self.config.max_gap_frames) + 1
+        return [(segment_frames, segment_values) for segment_frames, segment_values in zip(
+            np.split(frame_indices, breaks), np.split(values, breaks)
+        )]
+
+    def _detect_events(self, series: _WristSeries) -> tuple[int, list[int]]:
+        min_distance_frames = max(1, int(self.config.min_peak_distance_sec * self.fps))
+        event_frames: list[int] = []
+        count = 0
+        for frame_indices, values in self._segments(series):
+            if len(values) < 3:
+                continue
+            y = self._smooth(values)
+            signal_scale = (y.max() - y.min()) or 1.0
+            prominence = self.config.min_peak_prominence * signal_scale
+            peaks, _ = find_peaks(y, distance=min_distance_frames, prominence=prominence)
+            troughs, _ = find_peaks(-y, distance=min_distance_frames, prominence=prominence)
+            event_positions = np.sort(np.concatenate([peaks, troughs]))
+            event_frames.extend(int(frame_indices[position]) for position in event_positions)
+            count += len(event_positions) // 2 if len(event_positions) >= 2 else len(event_positions)
+        return count, sorted(event_frames)
+
+    def count_for_track(self, track_id: int) -> dict[str, int | float | list[int]]:
         """Retorna a contagem de braçadas por punho e o total combinado (média dos dois)."""
         result: dict[str, int | float] = {}
         per_wrist_counts = []
         for kp_idx in self.config.keypoint_indices:
             series = self._series[track_id][kp_idx]
-            n_peaks = 0
-            if len(series.y_values) >= 3:
-                y = self._smooth(np.array(series.y_values, dtype=np.float64))
-                bbox_scale = (y.max() - y.min()) or 1.0
-                min_distance_frames = max(1, int(self.config.min_peak_distance_sec * self.fps))
-                peaks, _ = find_peaks(
-                    y,
-                    distance=min_distance_frames,
-                    prominence=self.config.min_peak_prominence * bbox_scale,
-                )
-                troughs, _ = find_peaks(
-                    -y,
-                    distance=min_distance_frames,
-                    prominence=self.config.min_peak_prominence * bbox_scale,
-                )
-                n_peaks = len(peaks) + len(troughs)  # ciclo completo = 1 pico + 1 vale
-                n_peaks = n_peaks // 2 if n_peaks >= 2 else n_peaks
+            n_peaks, event_frames = self._detect_events(series)
             label = "left_wrist" if kp_idx == 9 else "right_wrist" if kp_idx == 10 else f"kp_{kp_idx}"
             result[label] = n_peaks
+            result[f"{label}_events"] = event_frames
             per_wrist_counts.append(n_peaks)
 
         result["estimated_total_strokes"] = (
@@ -87,5 +99,5 @@ class StrokeCounter:
         )
         return result
 
-    def summary(self) -> dict[int, dict[str, int | float]]:
+    def summary(self) -> dict[int, dict[str, int | float | list[int]]]:
         return {track_id: self.count_for_track(track_id) for track_id in self._series}

@@ -58,6 +58,7 @@ stroke_counter:
   smoothing_window: 5          # média móvel para suavizar ruído de keypoints
   min_peak_distance_sec: 0.4   # distância mínima entre picos (braçadas) em segundos
   min_peak_prominence: 0.03    # proeminência mínima do pico (fração da altura da bbox)
+  max_gap_frames: 5             # não conecta eventos através de uma oclusão longa
 
 evaluation:
   enabled: true

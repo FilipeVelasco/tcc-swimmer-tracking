@@ -23,6 +23,54 @@ import motmetrics as mm
 import numpy as np
 
 
+def compute_stroke_metrics(
+    predicted_events: dict[int, list[int]],
+    ground_truth_events: dict[int, list[int]],
+    tolerance_frames: int = 5,
+) -> dict[str, float]:
+    """Compare stroke event frames with one-to-one matching within a tolerance."""
+    total_absolute_error = 0.0
+    total_gt = 0
+    true_positive = 0
+    false_positive = 0
+    false_negative = 0
+
+    for track_id in set(predicted_events) | set(ground_truth_events):
+        predicted = sorted(predicted_events.get(track_id, []))
+        expected = sorted(ground_truth_events.get(track_id, []))
+        total_absolute_error += abs(len(predicted) - len(expected))
+        total_gt += len(expected)
+        matched_expected: set[int] = set()
+        for event in predicted:
+            candidates = [
+                (abs(event - target), index)
+                for index, target in enumerate(expected)
+                if index not in matched_expected and abs(event - target) <= tolerance_frames
+            ]
+            if candidates:
+                _, index = min(candidates)
+                matched_expected.add(index)
+                true_positive += 1
+            else:
+                false_positive += 1
+        false_negative += len(expected) - len(matched_expected)
+
+    precision = true_positive / (true_positive + false_positive) if true_positive + false_positive else 0.0
+    recall = true_positive / (true_positive + false_negative) if true_positive + false_negative else 0.0
+    f1 = 2 * precision * recall / (precision + recall) if precision + recall else 0.0
+    return {
+        "stroke_MAE": total_absolute_error / len(set(predicted_events) | set(ground_truth_events))
+        if set(predicted_events) | set(ground_truth_events) else 0.0,
+        "stroke_event_precision": precision,
+        "stroke_event_recall": recall,
+        "stroke_event_F1": f1,
+        "stroke_event_TP": float(true_positive),
+        "stroke_event_FP": float(false_positive),
+        "stroke_event_FN": float(false_negative),
+        "stroke_ground_truth_total": float(total_gt),
+    }
+
+
 def _iou_matrix(boxes_a: np.ndarray, boxes_b: np.ndarray) -> np.ndarray:
     """IoU entre dois conjuntos de boxes no formato xyxy. Shape: (len(a), len(b))."""
     if len(boxes_a) == 0 or len(boxes_b) == 0:
