@@ -13,6 +13,7 @@ import sys
 import dataclasses
 from pathlib import Path
 
+import cv2
 import numpy as np
 import pytest
 import supervision as sv
@@ -21,8 +22,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from src.evaluation.metrics import compute_hota, compute_map, compute_mot_metrics, compute_stroke_metrics
 from src.pose.stroke_counter import StrokeCounter
-from src.tracking.tracker import AppearanceReID, LaneAwareIdentity, SwimmerTracker
+from src.tracking.tracker import (
+    AppearanceReID, LaneAwareIdentity, PersistentIdentityManager, SwimmerTracker,
+)
 from src.utils.config import PipelineConfig, StrokeCounterConfig, TrackerConfig
+from src.utils.lane_detector import LaneDetector
 
 
 @pytest.fixture(scope="module")
@@ -114,6 +118,46 @@ def test_tracker_uses_independent_backend_per_lane():
     tracked = tracker.update(_make_frame(w=60, h=60), detections, frame_idx=0)
     assert len(tracked) == 2
     assert tracked.data["lane_id"].tolist() == [0, 1]
+
+
+def test_persistent_identity_survives_new_bytetrack_id():
+    manager = PersistentIdentityManager(TrackerConfig())
+    embedding = np.ones(16, dtype=np.float32)
+    first = manager.assign(1, -1, np.array([10, 10, 30, 30], dtype=np.float32),
+                           embedding, 0, set())
+    recovered = manager.assign(9, -1, np.array([11, 10, 31, 30], dtype=np.float32),
+                              embedding, 5, set())
+    assert recovered == first
+    assert manager.reassociations == 1
+
+
+def test_persistent_identity_never_reuses_id_for_two_lanes_in_same_frame():
+    manager = PersistentIdentityManager(TrackerConfig())
+    embedding = np.ones(16, dtype=np.float32)
+    first = manager.assign(1, 0, np.array([10, 10, 30, 30], dtype=np.float32),
+                           embedding, 0, set())
+    second = manager.assign(9, 1, np.array([10, 10, 30, 30], dtype=np.float32),
+                            embedding, 1, {first})
+    assert second != first
+
+
+def test_lane_detector_builds_horizontal_polygons_from_detected_lines():
+    from src.utils.config import LaneConfig
+
+    image = np.zeros((200, 300, 3), dtype=np.uint8)
+    image[:] = (180, 110, 30)
+    for y in (25, 70, 115, 160):
+        cv2.line(image, (10, y), (290, y), (255, 255, 255), 3)
+    detector = LaneDetector(LaneConfig(
+        enabled=True,
+        mode="auto",
+        number=3,
+        min_water_ratio=0.1,
+        min_line_length_ratio=0.5,
+    ))
+    result = detector.calibrate(image)
+    assert result.orientation == "horizontal"
+    assert len(result.polygons) == 3
 
 
 # ---------------------------------------------------------------------------

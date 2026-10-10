@@ -1,0 +1,9 @@
+detections_after_filters,detections_before_filters,elapsed_seconds,frames_processed,identity_fragmentation_ratio,new_logical_identities,path,persistent_reassociations,processing_fps,status,total_estimated_strokes,track_coverage_percent,track_observations,track_observations_per_frame,tracks_with_strokes,unique_track_ids,video,video_fps,wall_seconds
+4113,4113,276.82,1227,0.112,41,data/raw/natacao_teste_2_c1.mp4,366,4.43,ok,51.0,212.7139,2610,2.1271,16,41,natacao_teste_2_c1.mp4,30,280.38
+363,363,117.47,720,0.2727,6,data/raw/natacao_teste_3_c1.mp4,22,6.13,ok,5.0,36.6667,264,0.3667,3,6,natacao_teste_3_c1.mp4,30,117.72
+233,233,112.05,660,0.3333,3,data/raw/natacao_teste_3_c2.mp4,9,5.89,ok,3.0,28.3333,187,0.2833,2,3,natacao_teste_3_c2.mp4,30,112.37
+23,23,33.36,210,0.5,2,data/raw/natacao_teste_4_c1.mp4,4,6.29,ok,0.0,2.8571,6,0.0286,0,2,natacao_teste_4_c1.mp4,30,33.61
+37,37,34.69,240,2.0,2,data/raw/natacao_teste_4_c2.mp4,0,6.92,ok,0,2.9167,7,0.0292,0,2,natacao_teste_4_c2.mp4,30,34.94
+10,10,60.37,330,0.0,0,data/raw/natacao_teste_4_c3.mp4,0,5.47,ok,0,0.0,0,0.0,0,0,natacao_teste_4_c3.mp4,30,60.63
+141,141,160.84,660,0.5385,7,data/raw/natacao_teste_5_c1.mp4,13,4.1,ok,0.0,3.3333,22,0.0333,0,7,natacao_teste_5_c1.mp4,30,161.23
+215,215,44.21,299,0.36,9,data/raw/natacao_teste_6_c1.mp4,25,6.76,ok,3.5,36.7893,110,0.3679,3,9,natacao_teste_6_c1.mp4,30,44.49

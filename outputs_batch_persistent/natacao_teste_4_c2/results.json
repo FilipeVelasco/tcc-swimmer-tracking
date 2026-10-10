@@ -1,0 +1,24 @@
+{
+  "frames_processed": 240,
+  "elapsed_seconds": 34.69,
+  "fps_processing": 6.92,
+  "video": {
+    "source": "data/raw/natacao_teste_4_c2.mp4",
+    "fps": 30,
+    "width": 640,
+    "height": 360
+  },
+  "models": {
+    "detector": "yolo11n.pt",
+    "pose": "yolo11n-pose.pt"
+  },
+  "tracking": {
+    "detections_before_filters": 37,
+    "detections_after_filters": 37,
+    "track_observations": 7,
+    "unique_track_ids": 2,
+    "persistent_reassociations": 0,
+    "new_logical_identities": 2
+  },
+  "stroke_counts": {}
+}

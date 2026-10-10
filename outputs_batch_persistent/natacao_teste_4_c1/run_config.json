@@ -1,0 +1,91 @@
+{
+  "mode": "real",
+  "video": {
+    "source": "data/raw/natacao_teste_4_c1.mp4",
+    "fps": 30,
+    "width": 640,
+    "height": 360
+  },
+  "detector": {
+    "weights_path": "yolo11n.pt",
+    "conf_threshold": 0.25,
+    "iou_threshold": 0.45,
+    "imgsz": 640,
+    "device": "cpu",
+    "classes": [
+      0
+    ]
+  },
+  "tracker": {
+    "track_activation_threshold": 0.15,
+    "lost_track_buffer": 90,
+    "minimum_matching_threshold": 0.6,
+    "frame_rate": 30,
+    "lane_constraint_enabled": true,
+    "lane_switch_tolerance_frames": 3,
+    "lane_reassociation_max_gap_frames": 90,
+    "lane_reassociation_distance_factor": 2.5,
+    "persistent_identity_enabled": true,
+    "identity_max_gap_frames": 90,
+    "identity_distance_factor": 3.0,
+    "identity_min_iou": 0.05,
+    "identity_min_appearance_similarity": 0.55,
+    "reid_fallback": {
+      "enabled": true,
+      "max_lost_age_frames": 90,
+      "similarity_threshold": 0.65,
+      "histogram_bins": [
+        8,
+        8,
+        8
+      ]
+    }
+  },
+  "pose": {
+    "weights_path": "yolo11n-pose.pt",
+    "conf_threshold": 0.15,
+    "imgsz": 320,
+    "device": "cpu",
+    "crop_margin": 0.25,
+    "inference_interval_frames": 3,
+    "stale_pose_max_frames": 6,
+    "stale_pose_confidence_decay": 0.85
+  },
+  "stroke_counter": {
+    "keypoint_indices": [
+      9,
+      10
+    ],
+    "min_confidence": 0.15,
+    "smoothing_window": 7,
+    "min_peak_distance_sec": 0.4,
+    "min_peak_prominence": 0.05,
+    "max_gap_frames": 5
+  },
+  "evaluation": {
+    "enabled": false,
+    "gt_path": "data/annotations/gt_real.txt",
+    "metrics": [
+      "mAP@0.5",
+      "mAP@0.5:0.95",
+      "MOTA",
+      "IDF1",
+      "HOTA"
+    ],
+    "iou_threshold_map": 0.5,
+    "stroke_events_gt_path": "data/annotations/stroke_events_gt.csv",
+    "stroke_tolerance_frames": 5
+  },
+  "output": {
+    "dir": "outputs_batch_persistent/natacao_teste_4_c1",
+    "save_annotated_video": false,
+    "save_metrics_json": true,
+    "save_stroke_counts_csv": true,
+    "save_mot_predictions": true
+  },
+  "roi": {
+    "enabled": false,
+    "points": [],
+    "lanes": []
+  }
+}

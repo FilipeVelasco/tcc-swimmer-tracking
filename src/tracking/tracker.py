@@ -52,6 +52,131 @@ class LaneTrackState:
     bbox: tuple[float, float, float, float]
 
 
+@dataclass
+class PersistentTrackState:
+    logical_id: int
+    raw_id: int
+    lane_id: int
+    bbox: np.ndarray
+    embedding: np.ndarray
+    velocity: np.ndarray
+    last_frame: int
+
+
+class PersistentIdentityManager:
+    """Keeps logical identities across temporary ByteTrack ID fragmentation."""
+
+    def __init__(self, config: TrackerConfig):
+        self.config = config
+        self.states: dict[int, PersistentTrackState] = {}
+        self.raw_to_logical: dict[int, int] = {}
+        self.next_id = 1
+        self.reassociations = 0
+        self.new_identities = 0
+
+    def assign(
+        self,
+        raw_id: int,
+        lane_id: int,
+        bbox: np.ndarray,
+        embedding: np.ndarray,
+        frame_idx: int,
+        reserved: set[int],
+    ) -> int:
+        known_id = self.raw_to_logical.get(raw_id)
+        if known_id is not None and known_id not in reserved:
+            state = self.states.get(known_id)
+            if state is not None and self._lane_compatible(state.lane_id, lane_id):
+                self._update(state, raw_id, lane_id, bbox, embedding, frame_idx)
+                return known_id
+
+        candidate = self._best_candidate(lane_id, bbox, embedding, frame_idx, reserved)
+        if candidate is None:
+            logical_id = self.next_id
+            self.next_id += 1
+            self.new_identities += 1
+            self.states[logical_id] = PersistentTrackState(
+                logical_id=logical_id,
+                raw_id=raw_id,
+                lane_id=lane_id,
+                bbox=bbox.copy(),
+                embedding=embedding.copy(),
+                velocity=np.zeros(2, dtype=np.float32),
+                last_frame=frame_idx,
+            )
+        else:
+            logical_id = candidate
+            self.reassociations += 1
+            self._update(self.states[logical_id], raw_id, lane_id, bbox, embedding, frame_idx)
+        self.raw_to_logical[raw_id] = logical_id
+        return logical_id
+
+    def _best_candidate(
+        self,
+        lane_id: int,
+        bbox: np.ndarray,
+        embedding: np.ndarray,
+        frame_idx: int,
+        reserved: set[int],
+    ) -> int | None:
+        best: tuple[float, int] | None = None
+        for logical_id, state in self.states.items():
+            if logical_id in reserved or frame_idx - state.last_frame > self.config.identity_max_gap_frames:
+                continue
+            if not self._lane_compatible(state.lane_id, lane_id):
+                continue
+            gap = max(1, frame_idx - state.last_frame)
+            predicted = self._predicted_center(state, gap)
+            current_center = self._center(bbox)
+            diagonal = max(float(np.linalg.norm([bbox[2] - bbox[0], bbox[3] - bbox[1]])), 1.0)
+            distance = float(np.linalg.norm(current_center - predicted))
+            distance_limit = self.config.identity_distance_factor * diagonal * (1 + 0.15 * gap)
+            if distance > distance_limit:
+                continue
+            iou = self._iou(state.bbox, bbox)
+            appearance = AppearanceReID.cosine_similarity(embedding, state.embedding)
+            if iou < self.config.identity_min_iou and appearance < self.config.identity_min_appearance_similarity:
+                continue
+            score = distance / distance_limit + 0.35 * (1 - iou) + 0.35 * (1 - appearance)
+            if best is None or score < best[0]:
+                best = (score, logical_id)
+        return best[1] if best else None
+
+    def _update(
+        self, state: PersistentTrackState, raw_id: int, lane_id: int,
+        bbox: np.ndarray, embedding: np.ndarray, frame_idx: int,
+    ) -> None:
+        gap = max(1, frame_idx - state.last_frame)
+        velocity = (self._center(bbox) - self._center(state.bbox)) / gap
+        state.velocity = 0.7 * state.velocity + 0.3 * velocity
+        state.raw_id = raw_id
+        state.lane_id = lane_id if lane_id >= 0 else state.lane_id
+        state.bbox = bbox.copy()
+        state.embedding = 0.7 * state.embedding + 0.3 * embedding
+        state.last_frame = frame_idx
+
+    @staticmethod
+    def _center(bbox: np.ndarray) -> np.ndarray:
+        return np.asarray([(bbox[0] + bbox[2]) / 2, (bbox[1] + bbox[3]) / 2], dtype=np.float32)
+
+    @staticmethod
+    def _iou(first: np.ndarray, second: np.ndarray) -> float:
+        x1, y1 = np.maximum(first[:2], second[:2])
+        x2, y2 = np.minimum(first[2:], second[2:])
+        intersection = max(0.0, float(x2 - x1)) * max(0.0, float(y2 - y1))
+        first_area = max(0.0, float(first[2] - first[0])) * max(0.0, float(first[3] - first[1]))
+        second_area = max(0.0, float(second[2] - second[0])) * max(0.0, float(second[3] - second[1]))
+        union = first_area + second_area - intersection
+        return intersection / union if union > 0 else 0.0
+
+    @staticmethod
+    def _lane_compatible(first: int, second: int) -> bool:
+        return first < 0 or second < 0 or first == second
+
+    def _predicted_center(self, state: PersistentTrackState, gap: int) -> np.ndarray:
+        return self._center(state.bbox) + state.velocity * gap
+
+
 class LaneAwareIdentity:
     """Maintains logical IDs and rejects impossible cross-lane switches."""
 
@@ -198,11 +323,12 @@ class SwimmerTracker:
             warnings.simplefilter("ignore", FutureWarning)
             self.byte_track = self._build_byte_track()
             self._lane_byte_tracks: dict[int, sv.ByteTrack] = {}
-        self.reid = AppearanceReID(
+        self.appearance = AppearanceReID(
             bins=config.reid_fallback.histogram_bins,
             max_lost_age_frames=config.reid_fallback.max_lost_age_frames,
             similarity_threshold=config.reid_fallback.similarity_threshold,
-        ) if config.reid_fallback.enabled else None
+        )
+        self.reid = self.appearance if config.reid_fallback.enabled else None
         self.history = TrackHistory()
         self._active_ids_prev_frame: set[int] = set()
         self._embeddings_by_id: dict[int, np.ndarray] = {}
@@ -210,6 +336,9 @@ class SwimmerTracker:
             config.lane_switch_tolerance_frames,
             config.lane_reassociation_max_gap_frames,
             config.lane_reassociation_distance_factor,
+        )
+        self.persistent_identity = (
+            PersistentIdentityManager(config) if config.persistent_identity_enabled else None
         )
 
     def _build_byte_track(self) -> sv.ByteTrack:
@@ -246,7 +375,20 @@ class SwimmerTracker:
         if self.reid is not None:
             tracked = self._apply_reid_fallback(frame, tracked, frame_idx)
 
-        if (self.config.lane_constraint_enabled and "lane_id" in tracked.data
+        if (self.persistent_identity is not None and tracked.tracker_id is not None):
+            logical_ids = []
+            reserved_ids: set[int] = set()
+            for index, (bbox, raw_id) in enumerate(zip(tracked.xyxy, tracked.tracker_id)):
+                lane_id = int(tracked.data["lane_id"][index]) if "lane_id" in tracked.data else -1
+                logical_id = self.persistent_identity.assign(
+                    int(raw_id), lane_id, bbox,
+                    self.appearance.compute_embedding(frame, bbox, self.appearance.bins),
+                    frame_idx, reserved_ids,
+                )
+                logical_ids.append(logical_id)
+                reserved_ids.add(logical_id)
+            tracked.tracker_id = np.asarray(logical_ids, dtype=np.int32)
+        elif (self.config.lane_constraint_enabled and "lane_id" in tracked.data
                 and tracked.tracker_id is not None):
             logical_ids = []
             reserved_ids: set[int] = set()
@@ -261,12 +403,12 @@ class SwimmerTracker:
 
         current_ids = set(tracked.tracker_id.tolist()) if tracked.tracker_id is not None else set()
 
-        if self.reid is not None:
+        if self.reid is not None and self.persistent_identity is None:
             for track_id in current_ids:
                 self.reid.discard(int(track_id))
 
         # tracks que sumiram desde o frame anterior -> guardar embedding para possível resgate futuro
-        if self.reid is not None:
+        if self.reid is not None and self.persistent_identity is None:
             newly_lost = self._active_ids_prev_frame - current_ids
             for tid in newly_lost:
                 emb = self._embeddings_by_id.get(tid)
@@ -278,7 +420,9 @@ class SwimmerTracker:
             for bbox, tid in zip(tracked.xyxy, tracked.tracker_id):
                 self.history.update(frame_idx, int(tid), tuple(bbox.tolist()))
                 if self.reid is not None:
-                    self._embeddings_by_id[int(tid)] = self.reid.compute_embedding(frame, bbox, self.reid.bins)
+                    self._embeddings_by_id[int(tid)] = self.appearance.compute_embedding(
+                        frame, bbox, self.appearance.bins,
+                    )
 
         self._active_ids_prev_frame = current_ids
         return tracked

@@ -1,0 +1,20 @@
+[
+  {
+    "video": "natacao_teste_2_c1.mp4",
+    "path": "data/raw/natacao_teste_2_c1.mp4",
+    "status": "ok",
+    "frames_processed": 1227,
+    "video_fps": 30,
+    "processing_fps": 4.47,
+    "elapsed_seconds": 274.46,
+    "detections_before_filters": 4113,
+    "detections_after_filters": 4113,
+    "track_observations": 2610,
+    "unique_track_ids": 70,
+    "track_observations_per_frame": 2.1271,
+    "track_coverage_percent": 212.7139,
+    "tracks_with_strokes": 11,
+    "total_estimated_strokes": 19.0,
+    "wall_seconds": 278.07
+  }
+]

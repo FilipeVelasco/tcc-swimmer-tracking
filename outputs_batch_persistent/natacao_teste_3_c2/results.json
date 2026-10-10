@@ -1,0 +1,58 @@
+{
+  "frames_processed": 660,
+  "elapsed_seconds": 112.05,
+  "fps_processing": 5.89,
+  "video": {
+    "source": "data/raw/natacao_teste_3_c2.mp4",
+    "fps": 30,
+    "width": 640,
+    "height": 360
+  },
+  "models": {
+    "detector": "yolo11n.pt",
+    "pose": "yolo11n-pose.pt"
+  },
+  "tracking": {
+    "detections_before_filters": 233,
+    "detections_after_filters": 233,
+    "track_observations": 187,
+    "unique_track_ids": 3,
+    "persistent_reassociations": 9,
+    "new_logical_identities": 3
+  },
+  "stroke_counts": {
+    "1": {
+      "left_wrist": 0,
+      "left_wrist_events": [],
+      "right_wrist": 0,
+      "right_wrist_events": [],
+      "estimated_total_strokes": 0.0
+    },
+    "2": {
+      "left_wrist": 1,
+      "left_wrist_events": [
+        147
+      ],
+      "right_wrist": 1,
+      "right_wrist_events": [
+        147
+      ],
+      "estimated_total_strokes": 1.0
+    },
+    "3": {
+      "left_wrist": 2,
+      "left_wrist_events": [
+        585,
+        633
+      ],
+      "right_wrist": 2,
+      "right_wrist_events": [
+        537,
+        561,
+        585,
+        630
+      ],
+      "estimated_total_strokes": 2.0
+    }
+  }
+}

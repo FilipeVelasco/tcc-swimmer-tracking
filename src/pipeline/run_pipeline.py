@@ -24,6 +24,7 @@ from src.pose.pose_estimator import build_pose_estimator
 from src.pose.stroke_counter import StrokeCounter
 from src.tracking.tracker import SwimmerTracker
 from src.utils.config import PipelineConfig
+from src.utils.lane_detector import LaneCalibration, LaneDetector
 from src.utils.roi_filter import (
     draw_roi, filter_detections_by_lanes, filter_detections_by_roi,
     normalized_lanes_to_pixel_polygons, roi_to_pixel_polygon,
@@ -46,6 +47,7 @@ class SwimmerTrackingPipeline:
             mode=config.mode, config=config.pose, gt_keypoints_path=gt_kp_path,
         )
         self.stroke_counter = StrokeCounter(config.stroke_counter, fps=config.video.fps)
+        self.lane_detector = LaneDetector(config.lanes)
 
         self._preds_mot: dict[int, list[tuple[int, float, float, float, float]]] = {}
         self._preds_map: dict[int, list[tuple[float, float, float, float, float]]] = {}
@@ -81,6 +83,7 @@ class SwimmerTrackingPipeline:
 
         roi_polygon_px = None
         lane_polygons_px = []
+        lane_calibration = LaneCalibration([], 0.0, 0, "none", 0.0)
         if self.config.roi.enabled and self.config.roi.points:
             roi_polygon_px = roi_to_pixel_polygon(
                 self.config.roi.points, self.config.video.width, self.config.video.height
@@ -112,6 +115,18 @@ class SwimmerTrackingPipeline:
             ok, frame = cap.read()
             if not ok:
                 break
+
+            if (
+                self.config.lanes.enabled
+                and self.config.lanes.mode == "auto"
+                and frame_idx == self.config.lanes.calibration_frame
+            ):
+                lane_calibration = self.lane_detector.calibrate(frame)
+                lane_polygons_px = self.lane_detector.polygons_to_pixels(
+                    lane_calibration.polygons,
+                    self.config.video.width,
+                    self.config.video.height,
+                )
 
             detections = self.detector.detect(frame, frame_idx)
             self._detection_count += len(detections)
@@ -220,6 +235,19 @@ class SwimmerTrackingPipeline:
                 "detections_after_filters": self._filtered_detection_count,
                 "track_observations": self._track_observation_count,
                 "unique_track_ids": len(self._track_ids_seen),
+                "persistent_reassociations": self.tracker.persistent_identity.reassociations
+                if self.tracker.persistent_identity is not None else 0,
+                "new_logical_identities": self.tracker.persistent_identity.new_identities
+                if self.tracker.persistent_identity is not None else len(self._track_ids_seen),
+            },
+            "lanes": {
+                "mode": self.config.lanes.mode,
+                "enabled": self.config.lanes.enabled,
+                "detected_polygons": len(lane_calibration.polygons),
+                "line_count": lane_calibration.line_count,
+                "water_ratio": round(lane_calibration.water_ratio, 4),
+                "orientation": lane_calibration.orientation,
+                "confidence": round(lane_calibration.confidence, 4),
             },
             "stroke_counts": self.stroke_counter.summary(),
         }

@@ -1,0 +1,6 @@
+track_id,left_wrist,right_wrist,estimated_total_strokes
+1,0,0,0.0
+3,2,2,2.0
+4,1,0,0.5
+5,2,3,2.5
+6,0,0,0.0

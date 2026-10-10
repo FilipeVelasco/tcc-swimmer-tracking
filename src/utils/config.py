@@ -16,6 +16,10 @@ class DetectorConfig:
     imgsz: int = 640
     device: str = "cpu"
     classes: list[int] = field(default_factory=lambda: [0])
+    min_box_width_px: float = 1.0
+    min_box_height_px: float = 1.0
+    expected_model_variant: str | None = None
+    collect_timing: bool = True
 
 
 @dataclass
@@ -36,6 +40,11 @@ class TrackerConfig:
     lane_switch_tolerance_frames: int = 3
     lane_reassociation_max_gap_frames: int = 90
     lane_reassociation_distance_factor: float = 2.5
+    persistent_identity_enabled: bool = True
+    identity_max_gap_frames: int = 90
+    identity_distance_factor: float = 3.0
+    identity_min_iou: float = 0.05
+    identity_min_appearance_similarity: float = 0.55
     reid_fallback: ReidFallbackConfig = field(default_factory=ReidFallbackConfig)
 
 
@@ -98,6 +107,20 @@ class RoiConfig:
 
 
 @dataclass
+class LaneConfig:
+    enabled: bool = False
+    mode: str = "disabled"  # disabled | auto | manual
+    number: int = 8
+    min_water_ratio: float = 0.15
+    min_line_length_ratio: float = 0.20
+    max_line_gap: int = 25
+    min_lane_width_ratio: float = 0.03
+    allow_interpolation: bool = False
+    calibration_frame: int = 0
+    temporal_smoothing: float = 0.15
+
+
+@dataclass
 class PipelineConfig:
     mode: str
     video: VideoConfig
@@ -108,6 +131,7 @@ class PipelineConfig:
     evaluation: EvaluationConfig
     output: OutputConfig
     roi: RoiConfig = field(default_factory=RoiConfig)
+    lanes: LaneConfig = field(default_factory=LaneConfig)
 
     @staticmethod
     def load(path: str | Path) -> "PipelineConfig":
@@ -125,6 +149,7 @@ class PipelineConfig:
             evaluation=EvaluationConfig(**raw["evaluation"]),
             output=OutputConfig(**raw["output"]),
             roi=RoiConfig(**raw["roi"]) if "roi" in raw else RoiConfig(),
+            lanes=LaneConfig(**raw["lanes"]) if "lanes" in raw else LaneConfig(),
         )
 
     def validate_inputs(self, *, require_video: bool = True, require_detector_weights: bool = True,
@@ -144,6 +169,14 @@ class PipelineConfig:
             errors.append("tracker.lane_reassociation_max_gap_frames não pode ser negativo")
         if self.tracker.lane_reassociation_distance_factor <= 0:
             errors.append("tracker.lane_reassociation_distance_factor deve ser positivo")
+        if self.tracker.identity_max_gap_frames < 0:
+            errors.append("tracker.identity_max_gap_frames não pode ser negativo")
+        if self.tracker.identity_distance_factor <= 0:
+            errors.append("tracker.identity_distance_factor deve ser positivo")
+        if not 0 <= self.tracker.identity_min_iou <= 1:
+            errors.append("tracker.identity_min_iou deve estar no intervalo [0, 1]")
+        if not 0 <= self.tracker.identity_min_appearance_similarity <= 1:
+            errors.append("tracker.identity_min_appearance_similarity deve estar no intervalo [0, 1]")
 
         if not 0 < self.detector.conf_threshold <= 1:
             errors.append("detector.conf_threshold deve estar no intervalo (0, 1]")
@@ -151,6 +184,10 @@ class PipelineConfig:
             errors.append("detector.iou_threshold deve estar no intervalo (0, 1]")
         if not self.detector.classes or any(class_id < 0 for class_id in self.detector.classes):
             errors.append("detector.classes deve conter ao menos um índice não negativo")
+        if self.detector.imgsz <= 0:
+            errors.append("detector.imgsz deve ser positivo")
+        if self.detector.min_box_width_px <= 0 or self.detector.min_box_height_px <= 0:
+            errors.append("detector.min_box_width_px e min_box_height_px devem ser positivos")
         if require_detector_weights and self.mode == "real":
             weights = Path(self.detector.weights_path)
             official_name = weights.name.startswith(("yolo8", "yolo11")) and weights.suffix == ".pt"
@@ -176,6 +213,16 @@ class PipelineConfig:
             elif any(len(point) != 2 or not all(0 <= value <= 1 for value in point)
                      for point in self.roi.points):
                 errors.append("roi.points deve usar pares normalizados entre 0 e 1")
+        if self.lanes.mode not in {"disabled", "auto", "manual"}:
+            errors.append("lanes.mode deve ser 'disabled', 'auto' ou 'manual'")
+        if self.lanes.number < 1:
+            errors.append("lanes.number deve ser positivo")
+        if not 0 <= self.lanes.temporal_smoothing <= 1:
+            errors.append("lanes.temporal_smoothing deve estar no intervalo [0, 1]")
+        if not 0 <= self.lanes.min_water_ratio <= 1:
+            errors.append("lanes.min_water_ratio deve estar no intervalo [0, 1]")
+        if self.lanes.min_line_length_ratio <= 0:
+            errors.append("lanes.min_line_length_ratio deve ser positivo")
         for lane_idx, lane in enumerate(self.roi.lanes, start=1):
             if len(lane) < 3 or any(len(point) != 2 or not all(0 <= value <= 1 for value in point)
                                      for point in lane):

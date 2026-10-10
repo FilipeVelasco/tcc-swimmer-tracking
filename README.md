@@ -72,6 +72,12 @@ O arquivo `run_config.json` registra a configuração usada em cada execução. 
 com `yolo11n.pt` e `yolo11n-pose.pt` valida a integração, mas não representa a avaliação
 final do TCC; depois, basta substituir os caminhos pelos pesos treinados.
 
+O detector real mantém a interface `detect(frame, frame_id)`, usada pelo ByteTrack, e
+também oferece `detect_with_metadata(...)`. A segunda forma retorna caixas em `xyxy`,
+`cxcywh`, formato normalizado, scores, classes e tempos de pré-processamento, inferência
+e pós-processamento. Também existem iteradores para vídeos e sequências de imagens:
+`detect_video(...)` e `detect_images(...)`.
+
 ### Ambiente CPU e PyTorch
 
 Para este computador, use [requirements-cpu.txt](requirements-cpu.txt). O problema
@@ -122,6 +128,37 @@ um ID não atravessa uma raia configurada; se o detector perder o atleta e gerar
 na mesma raia, o pipeline tenta recuperar a identidade por proximidade e aparência.
 Os campos `head_confidence`, `shoulder_confidence` e `arm_confidence` em `tracks.csv`
 permitem auditar a qualidade da pose e detectar quando cabeça ou braços estão invisíveis.
+
+Para executar todos os cortes `*_c*.mp4` sem aplicar a ROI específica de um único vídeo:
+
+```bash
+venv/bin/python scripts/run_batch.py \
+  --config configs/pipeline_real_video_natacao.yaml \
+  --input-dir data/raw \
+  --output-dir outputs_batch \
+  --roi-mode full
+```
+
+O lote gera uma pasta por vídeo e os arquivos `batch_summary.csv` e
+`batch_summary.json`. Use `--roi-mode config` somente quando a geometria da configuração
+for válida para todos os vídeos selecionados. Use `--save-video` para guardar os vídeos
+anotados, ou omita essa opção para priorizar métricas e economizar disco.
+
+Para testar a calibração automática de raias em todos os cortes, acrescente:
+
+```bash
+--lane-mode auto
+```
+
+O padrão `--lane-mode config` preserva o comportamento da configuração. Use
+`--lane-mode disabled` para garantir que nenhum filtro de raia seja aplicado.
+Os metadados da execução informam `detected_polygons`, `line_count`, `water_ratio`
+e `confidence` da calibração.
+
+O campo `persistent_reassociations` mede quantas vezes um novo ID interno do ByteTrack
+foi absorvido por uma identidade lógica já existente. `new_logical_identities` é o número
+de identidades expostas ao pipeline; ele deve ser interpretado junto com a contagem real
+de nadadores, não como uma medida de acurácia isolada.
 
 Em CPU, `pose.inference_interval_frames: 3` é uma opção prática para executar pose a
 cada três frames e preservar a detecção/tracking em todos os frames. Para avaliação final
