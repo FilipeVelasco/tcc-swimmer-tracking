@@ -1,7 +1,8 @@
-outputs/
-data/raw/*.mp4
-venv/
-__pycache__/
-*.pyc
+data/
 *.pt
-.pytest_cache/
+*.pth
+*.onnx
+*.mp4
+runs/
+__pycache__/
+.venv/

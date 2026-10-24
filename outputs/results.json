@@ -1,0 +1,53 @@
+{
+  "frames_processed": 20,
+  "elapsed_seconds": 0.42,
+  "fps_processing": 47.9,
+  "video": {
+    "source": "data/synthetic/synthetic_video.mp4",
+    "fps": 30,
+    "width": 1280,
+    "height": 720
+  },
+  "models": {
+    "detector": "models/yolo11n_swimmers.pt",
+    "pose": "yolo11n-pose.pt"
+  },
+  "tracking": {
+    "detections_before_filters": 17,
+    "detections_after_filters": 17,
+    "track_observations": 15,
+    "unique_track_ids": 2
+  },
+  "stroke_counts": {
+    "1": {
+      "left_wrist": 1,
+      "left_wrist_events": [
+        16
+      ],
+      "right_wrist": 1,
+      "right_wrist_events": [
+        16
+      ],
+      "estimated_total_strokes": 1.0
+    }
+  },
+  "metrics": {
+    "AP@0.50": 0.09090909090909091,
+    "AP@0.55": 0.09090909090909091,
+    "AP@0.60": 0.09090909090909091,
+    "AP@0.65": 0.09090909090909091,
+    "AP@0.70": 0.09090909090909091,
+    "AP@0.75": 0.09090909090909091,
+    "AP@0.80": 0.07575757575757576,
+    "AP@0.85": 0.06818181818181818,
+    "AP@0.90": 0.03787878787878788,
+    "AP@0.95": 0.012121212121212121,
+    "mAP@0.5": 0.09090909090909091,
+    "mAP@0.5:0.95": 0.07393939393939394,
+    "MOTA": 0.007957559681697646,
+    "IDF1": 0.015789473684210527,
+    "HOTA": 0.012936551164921255,
+    "DetA": 0.001053740779768177,
+    "AssA": 0.0031592039800995026
+  }
+}
