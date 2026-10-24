@@ -1,0 +1,19 @@
+dataset/swimming.v1i.yolov11.zip
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# Artefatos de treino e inferencia
+runs/
+resultados/
+
+# Dataset (baixar do Roboflow)
+dataset/*
+!dataset/swimming.v1i.yolov11/
+dataset/swimming.v1i.yolov11/*
+!dataset/swimming.v1i.yolov11/data.yaml
+!dataset/swimming.v1i.yolov11/README.dataset.txt
+!dataset/swimming.v1i.yolov11/README.roboflow.txt
+*.mp4
