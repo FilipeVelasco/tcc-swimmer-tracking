@@ -1,0 +1,23 @@
+[
+  {
+    "video": "natacao_teste_4_c3.mp4",
+    "path": "data/raw/natacao_teste_4_c3.mp4",
+    "status": "ok",
+    "frames_processed": 330,
+    "video_fps": 30,
+    "processing_fps": 0.4,
+    "elapsed_seconds": 824.64,
+    "detections_before_filters": 1824,
+    "detections_after_filters": 0,
+    "track_observations": 0,
+    "unique_track_ids": 0,
+    "track_observations_per_frame": 0.0,
+    "track_coverage_percent": 0.0,
+    "persistent_reassociations": 0,
+    "new_logical_identities": 0,
+    "identity_fragmentation_ratio": 0.0,
+    "tracks_with_strokes": 0,
+    "total_estimated_strokes": 0,
+    "wall_seconds": 832.9
+  }
+]

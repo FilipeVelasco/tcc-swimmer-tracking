@@ -10,7 +10,7 @@ video:
   height: 352
 
 detector:
-  weights_path: "yolo11n.pt"
+  weights_path: "best.pt"
   conf_threshold: 0.25
   iou_threshold: 0.45
   imgsz: 640

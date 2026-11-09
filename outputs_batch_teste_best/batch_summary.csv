@@ -1,0 +1,2 @@
+detections_after_filters,detections_before_filters,elapsed_seconds,frames_processed,identity_fragmentation_ratio,new_logical_identities,path,persistent_reassociations,processing_fps,status,total_estimated_strokes,track_coverage_percent,track_observations,track_observations_per_frame,tracks_with_strokes,unique_track_ids,video,video_fps,wall_seconds
+49,49,292.82,100,0.1818,2,data/raw/natacao_teste_2_c1.mp4,11,0.34,ok,0,20.0,20,0.2,0,2,natacao_teste_2_c1.mp4,30,310.8

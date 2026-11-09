@@ -1,0 +1,33 @@
+{
+  "frames_processed": 660,
+  "elapsed_seconds": 1604.39,
+  "fps_processing": 0.41,
+  "video": {
+    "source": "data/raw/natacao_teste_3_c2.mp4",
+    "fps": 30,
+    "width": 640,
+    "height": 360
+  },
+  "models": {
+    "detector": "best.pt",
+    "pose": "yolo11n-pose.pt"
+  },
+  "tracking": {
+    "detections_before_filters": 35,
+    "detections_after_filters": 35,
+    "track_observations": 2,
+    "unique_track_ids": 1,
+    "persistent_reassociations": 1,
+    "new_logical_identities": 1
+  },
+  "lanes": {
+    "mode": "disabled",
+    "enabled": false,
+    "detected_polygons": 0,
+    "line_count": 0,
+    "water_ratio": 0.0,
+    "orientation": "none",
+    "confidence": 0.0
+  },
+  "stroke_counts": {}
+}

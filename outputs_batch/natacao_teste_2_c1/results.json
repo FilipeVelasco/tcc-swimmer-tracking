@@ -1,7 +1,7 @@
 {
   "frames_processed": 1227,
-  "elapsed_seconds": 274.46,
-  "fps_processing": 4.47,
+  "elapsed_seconds": 2830.01,
+  "fps_processing": 0.43,
   "video": {
     "source": "data/raw/natacao_teste_2_c1.mp4",
     "fps": 30,
@@ -9,54 +9,42 @@
     "height": 352
   },
   "models": {
-    "detector": "yolo11n.pt",
+    "detector": "best.pt",
     "pose": "yolo11n-pose.pt"
   },
   "tracking": {
-    "detections_before_filters": 4113,
-    "detections_after_filters": 4113,
-    "track_observations": 2610,
-    "unique_track_ids": 70
+    "detections_before_filters": 908,
+    "detections_after_filters": 908,
+    "track_observations": 331,
+    "unique_track_ids": 7,
+    "persistent_reassociations": 168,
+    "new_logical_identities": 7
+  },
+  "lanes": {
+    "mode": "disabled",
+    "enabled": false,
+    "detected_polygons": 0,
+    "line_count": 0,
+    "water_ratio": 0.0,
+    "orientation": "none",
+    "confidence": 0.0
   },
   "stroke_counts": {
     "1": {
-      "left_wrist": 2,
-      "left_wrist_events": [
-        42,
-        69
-      ],
-      "right_wrist": 2,
-      "right_wrist_events": [
-        39,
-        69
-      ],
-      "estimated_total_strokes": 2.0
+      "left_wrist": 0,
+      "left_wrist_events": [],
+      "right_wrist": 0,
+      "right_wrist_events": [],
+      "estimated_total_strokes": 0.0
     },
     "2": {
-      "left_wrist": 2,
-      "left_wrist_events": [
-        15,
-        57
-      ],
-      "right_wrist": 2,
-      "right_wrist_events": [
-        15,
-        57
-      ],
-      "estimated_total_strokes": 2.0
+      "left_wrist": 0,
+      "left_wrist_events": [],
+      "right_wrist": 0,
+      "right_wrist_events": [],
+      "estimated_total_strokes": 0.0
     },
     "3": {
-      "left_wrist": 1,
-      "left_wrist_events": [
-        15
-      ],
-      "right_wrist": 1,
-      "right_wrist_events": [
-        18
-      ],
-      "estimated_total_strokes": 1.0
-    },
-    "9": {
       "left_wrist": 0,
       "left_wrist_events": [],
       "right_wrist": 0,
@@ -64,335 +52,6 @@
       "estimated_total_strokes": 0.0
     },
     "6": {
-      "left_wrist": 0,
-      "left_wrist_events": [],
-      "right_wrist": 0,
-      "right_wrist_events": [],
-      "estimated_total_strokes": 0.0
-    },
-    "13": {
-      "left_wrist": 0,
-      "left_wrist_events": [],
-      "right_wrist": 0,
-      "right_wrist_events": [],
-      "estimated_total_strokes": 0.0
-    },
-    "4": {
-      "left_wrist": 0,
-      "left_wrist_events": [],
-      "right_wrist": 0,
-      "right_wrist_events": [],
-      "estimated_total_strokes": 0.0
-    },
-    "24": {
-      "left_wrist": 2,
-      "left_wrist_events": [
-        54,
-        81
-      ],
-      "right_wrist": 1,
-      "right_wrist_events": [
-        81
-      ],
-      "estimated_total_strokes": 1.5
-    },
-    "5": {
-      "left_wrist": 0,
-      "left_wrist_events": [],
-      "right_wrist": 0,
-      "right_wrist_events": [],
-      "estimated_total_strokes": 0.0
-    },
-    "43": {
-      "left_wrist": 0,
-      "left_wrist_events": [],
-      "right_wrist": 0,
-      "right_wrist_events": [],
-      "estimated_total_strokes": 0.0
-    },
-    "70": {
-      "left_wrist": 0,
-      "left_wrist_events": [],
-      "right_wrist": 0,
-      "right_wrist_events": [],
-      "estimated_total_strokes": 0.0
-    },
-    "106": {
-      "left_wrist": 0,
-      "left_wrist_events": [],
-      "right_wrist": 0,
-      "right_wrist_events": [],
-      "estimated_total_strokes": 0.0
-    },
-    "146": {
-      "left_wrist": 0,
-      "left_wrist_events": [],
-      "right_wrist": 0,
-      "right_wrist_events": [],
-      "estimated_total_strokes": 0.0
-    },
-    "149": {
-      "left_wrist": 0,
-      "left_wrist_events": [],
-      "right_wrist": 0,
-      "right_wrist_events": [],
-      "estimated_total_strokes": 0.0
-    },
-    "166": {
-      "left_wrist": 0,
-      "left_wrist_events": [],
-      "right_wrist": 0,
-      "right_wrist_events": [],
-      "estimated_total_strokes": 0.0
-    },
-    "163": {
-      "left_wrist": 0,
-      "left_wrist_events": [],
-      "right_wrist": 1,
-      "right_wrist_events": [
-        435
-      ],
-      "estimated_total_strokes": 0.5
-    },
-    "159": {
-      "left_wrist": 0,
-      "left_wrist_events": [],
-      "right_wrist": 0,
-      "right_wrist_events": [],
-      "estimated_total_strokes": 0.0
-    },
-    "181": {
-      "left_wrist": 2,
-      "left_wrist_events": [
-        681,
-        744
-      ],
-      "right_wrist": 1,
-      "right_wrist_events": [
-        681
-      ],
-      "estimated_total_strokes": 1.5
-    },
-    "182": {
-      "left_wrist": 0,
-      "left_wrist_events": [],
-      "right_wrist": 0,
-      "right_wrist_events": [],
-      "estimated_total_strokes": 0.0
-    },
-    "187": {
-      "left_wrist": 0,
-      "left_wrist_events": [],
-      "right_wrist": 0,
-      "right_wrist_events": [],
-      "estimated_total_strokes": 0.0
-    },
-    "190": {
-      "left_wrist": 0,
-      "left_wrist_events": [],
-      "right_wrist": 0,
-      "right_wrist_events": [],
-      "estimated_total_strokes": 0.0
-    },
-    "192": {
-      "left_wrist": 0,
-      "left_wrist_events": [],
-      "right_wrist": 0,
-      "right_wrist_events": [],
-      "estimated_total_strokes": 0.0
-    },
-    "205": {
-      "left_wrist": 0,
-      "left_wrist_events": [],
-      "right_wrist": 0,
-      "right_wrist_events": [],
-      "estimated_total_strokes": 0.0
-    },
-    "207": {
-      "left_wrist": 0,
-      "left_wrist_events": [],
-      "right_wrist": 0,
-      "right_wrist_events": [],
-      "estimated_total_strokes": 0.0
-    },
-    "200": {
-      "left_wrist": 0,
-      "left_wrist_events": [],
-      "right_wrist": 0,
-      "right_wrist_events": [],
-      "estimated_total_strokes": 0.0
-    },
-    "235": {
-      "left_wrist": 1,
-      "left_wrist_events": [
-        876
-      ],
-      "right_wrist": 1,
-      "right_wrist_events": [
-        876
-      ],
-      "estimated_total_strokes": 1.0
-    },
-    "238": {
-      "left_wrist": 0,
-      "left_wrist_events": [],
-      "right_wrist": 0,
-      "right_wrist_events": [],
-      "estimated_total_strokes": 0.0
-    },
-    "244": {
-      "left_wrist": 0,
-      "left_wrist_events": [],
-      "right_wrist": 0,
-      "right_wrist_events": [],
-      "estimated_total_strokes": 0.0
-    },
-    "258": {
-      "left_wrist": 0,
-      "left_wrist_events": [],
-      "right_wrist": 0,
-      "right_wrist_events": [],
-      "estimated_total_strokes": 0.0
-    },
-    "259": {
-      "left_wrist": 0,
-      "left_wrist_events": [],
-      "right_wrist": 0,
-      "right_wrist_events": [],
-      "estimated_total_strokes": 0.0
-    },
-    "265": {
-      "left_wrist": 2,
-      "left_wrist_events": [
-        984,
-        1041,
-        1056
-      ],
-      "right_wrist": 1,
-      "right_wrist_events": [
-        993,
-        1020,
-        1044
-      ],
-      "estimated_total_strokes": 1.5
-    },
-    "263": {
-      "left_wrist": 5,
-      "left_wrist_events": [
-        981,
-        987,
-        1014,
-        1077,
-        1098,
-        1101,
-        1113
-      ],
-      "right_wrist": 4,
-      "right_wrist_events": [
-        984,
-        987,
-        1008,
-        1077,
-        1095
-      ],
-      "estimated_total_strokes": 4.5
-    },
-    "291": {
-      "left_wrist": 0,
-      "left_wrist_events": [],
-      "right_wrist": 1,
-      "right_wrist_events": [
-        1032
-      ],
-      "estimated_total_strokes": 0.5
-    },
-    "294": {
-      "left_wrist": 0,
-      "left_wrist_events": [],
-      "right_wrist": 0,
-      "right_wrist_events": [],
-      "estimated_total_strokes": 0.0
-    },
-    "305": {
-      "left_wrist": 0,
-      "left_wrist_events": [],
-      "right_wrist": 0,
-      "right_wrist_events": [],
-      "estimated_total_strokes": 0.0
-    },
-    "304": {
-      "left_wrist": 0,
-      "left_wrist_events": [],
-      "right_wrist": 0,
-      "right_wrist_events": [],
-      "estimated_total_strokes": 0.0
-    },
-    "315": {
-      "left_wrist": 0,
-      "left_wrist_events": [],
-      "right_wrist": 0,
-      "right_wrist_events": [],
-      "estimated_total_strokes": 0.0
-    },
-    "283": {
-      "left_wrist": 0,
-      "left_wrist_events": [],
-      "right_wrist": 0,
-      "right_wrist_events": [],
-      "estimated_total_strokes": 0.0
-    },
-    "320": {
-      "left_wrist": 0,
-      "left_wrist_events": [],
-      "right_wrist": 0,
-      "right_wrist_events": [],
-      "estimated_total_strokes": 0.0
-    },
-    "322": {
-      "left_wrist": 0,
-      "left_wrist_events": [],
-      "right_wrist": 0,
-      "right_wrist_events": [],
-      "estimated_total_strokes": 0.0
-    },
-    "329": {
-      "left_wrist": 0,
-      "left_wrist_events": [],
-      "right_wrist": 0,
-      "right_wrist_events": [],
-      "estimated_total_strokes": 0.0
-    },
-    "334": {
-      "left_wrist": 0,
-      "left_wrist_events": [],
-      "right_wrist": 0,
-      "right_wrist_events": [],
-      "estimated_total_strokes": 0.0
-    },
-    "340": {
-      "left_wrist": 0,
-      "left_wrist_events": [],
-      "right_wrist": 0,
-      "right_wrist_events": [],
-      "estimated_total_strokes": 0.0
-    },
-    "342": {
-      "left_wrist": 2,
-      "left_wrist_events": [
-        1134,
-        1215,
-        1221
-      ],
-      "right_wrist": 4,
-      "right_wrist_events": [
-        1107,
-        1140,
-        1167,
-        1194
-      ],
-      "estimated_total_strokes": 3.0
-    },
-    "357": {
       "left_wrist": 0,
       "left_wrist_events": [],
       "right_wrist": 0,

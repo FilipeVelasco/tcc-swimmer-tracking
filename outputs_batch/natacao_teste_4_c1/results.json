@@ -1,0 +1,96 @@
+{
+  "frames_processed": 210,
+  "elapsed_seconds": 514.74,
+  "fps_processing": 0.41,
+  "video": {
+    "source": "data/raw/natacao_teste_4_c1.mp4",
+    "fps": 30,
+    "width": 640,
+    "height": 360
+  },
+  "models": {
+    "detector": "best.pt",
+    "pose": "yolo11n-pose.pt"
+  },
+  "tracking": {
+    "detections_before_filters": 1015,
+    "detections_after_filters": 1015,
+    "track_observations": 771,
+    "unique_track_ids": 9,
+    "persistent_reassociations": 90,
+    "new_logical_identities": 9
+  },
+  "lanes": {
+    "mode": "disabled",
+    "enabled": false,
+    "detected_polygons": 0,
+    "line_count": 0,
+    "water_ratio": 0.0,
+    "orientation": "none",
+    "confidence": 0.0
+  },
+  "stroke_counts": {
+    "2": {
+      "left_wrist": 0,
+      "left_wrist_events": [],
+      "right_wrist": 0,
+      "right_wrist_events": [],
+      "estimated_total_strokes": 0.0
+    },
+    "5": {
+      "left_wrist": 0,
+      "left_wrist_events": [],
+      "right_wrist": 0,
+      "right_wrist_events": [],
+      "estimated_total_strokes": 0.0
+    },
+    "7": {
+      "left_wrist": 0,
+      "left_wrist_events": [],
+      "right_wrist": 0,
+      "right_wrist_events": [],
+      "estimated_total_strokes": 0.0
+    },
+    "9": {
+      "left_wrist": 1,
+      "left_wrist_events": [
+        81
+      ],
+      "right_wrist": 1,
+      "right_wrist_events": [
+        81
+      ],
+      "estimated_total_strokes": 1.0
+    },
+    "8": {
+      "left_wrist": 1,
+      "left_wrist_events": [
+        72
+      ],
+      "right_wrist": 0,
+      "right_wrist_events": [],
+      "estimated_total_strokes": 0.5
+    },
+    "1": {
+      "left_wrist": 0,
+      "left_wrist_events": [],
+      "right_wrist": 0,
+      "right_wrist_events": [],
+      "estimated_total_strokes": 0.0
+    },
+    "4": {
+      "left_wrist": 0,
+      "left_wrist_events": [],
+      "right_wrist": 0,
+      "right_wrist_events": [],
+      "estimated_total_strokes": 0.0
+    },
+    "6": {
+      "left_wrist": 0,
+      "left_wrist_events": [],
+      "right_wrist": 0,
+      "right_wrist_events": [],
+      "estimated_total_strokes": 0.0
+    }
+  }
+}

@@ -1,0 +1,17 @@
+track_id,wrist,frame_idx_zero_based,frame_number
+4,left_wrist,81,82
+4,left_wrist,138,139
+4,right_wrist,81,82
+4,right_wrist,138,139
+5,left_wrist,75,76
+5,right_wrist,81,82
+3,left_wrist,39,40
+3,left_wrist,99,100
+3,right_wrist,39,40
+3,right_wrist,99,100
+7,left_wrist,123,124
+7,left_wrist,168,169
+7,left_wrist,171,172
+7,right_wrist,123,124
+7,right_wrist,168,169
+8,right_wrist,273,274

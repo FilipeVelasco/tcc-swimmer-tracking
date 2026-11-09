@@ -7,14 +7,18 @@
     "height": 352
   },
   "detector": {
-    "weights_path": "yolo11n.pt",
+    "weights_path": "best.pt",
     "conf_threshold": 0.25,
     "iou_threshold": 0.45,
     "imgsz": 640,
     "device": "cpu",
     "classes": [
       0
-    ]
+    ],
+    "min_box_width_px": 1.0,
+    "min_box_height_px": 1.0,
+    "expected_model_variant": null,
+    "collect_timing": true
   },
   "tracker": {
     "track_activation_threshold": 0.15,
@@ -25,6 +29,11 @@
     "lane_switch_tolerance_frames": 3,
     "lane_reassociation_max_gap_frames": 90,
     "lane_reassociation_distance_factor": 2.5,
+    "persistent_identity_enabled": true,
+    "identity_max_gap_frames": 90,
+    "identity_distance_factor": 3.0,
+    "identity_min_iou": 0.05,
+    "identity_min_appearance_similarity": 0.55,
     "reid_fallback": {
       "enabled": true,
       "max_lost_age_frames": 90,
@@ -82,5 +91,17 @@
     "enabled": false,
     "points": [],
     "lanes": []
+  },
+  "lanes": {
+    "enabled": false,
+    "mode": "disabled",
+    "number": 8,
+    "min_water_ratio": 0.15,
+    "min_line_length_ratio": 0.2,
+    "max_line_gap": 25,
+    "min_lane_width_ratio": 0.03,
+    "allow_interpolation": false,
+    "calibration_frame": 0,
+    "temporal_smoothing": 0.15
   }
 }
