@@ -39,8 +39,8 @@ def para(mensagem):
 def argumentos():
     p = argparse.ArgumentParser(description="Detecta, rastreia e conta as braçadas dos nadadores de um vídeo.",
                                 epilog="Detalhes no LEIA-ME.md, nesta pasta.")
-    p.add_argument("video", help="o vídeo: uma tomada só, sem corte de câmera")
-    p.add_argument("--nadadores", type=int, help="quantos nadadores aparecem (um por raia)")
+    p.add_argument("video", help="o vídeo; se tiver troca de câmera, cada tomada é contada separada")
+    p.add_argument("--nadadores", type=int, help="quantos nadadores aparecem (um por raia); sem ele, o número é estimado")
     p.add_argument("--nado", choices=NADOS_VALIDADOS, help="o nado do vídeo")
     p.add_argument("--saida", help="pasta de saída (padrão: saidas/<nome do vídeo>, ao lado deste arquivo)")
     p.add_argument("--detector", default=str(AQUI / "yolo11m_640_final_14_competicoes.pt"), help="pesos do detector")
@@ -48,7 +48,105 @@ def argumentos():
     p.add_argument("--sem-video", action="store_true", help="não grava o vídeo anotado")
     p.add_argument("--so-deteccao", action="store_true", help="roda só o detector e para")
     p.add_argument("--refaz-deteccao", action="store_true", help="ignora a detecção guardada")
+    p.add_argument("--tomada-unica", action="store_true", help="não procura troca de câmera: o vídeo inteiro é uma tomada")
     return p.parse_args()
+
+
+def cortes_do_video(video, video_sha1, info, saida, cv2):
+    """Quadros em que começa uma tomada nova. Guardado em cortes.json, para não reler o vídeo na próxima vez."""
+    import tomadas
+    regra = {k: getattr(tomadas, k) for k in ("LIMIAR_COR", "LIMIAR_FORMA", "VEZES_A_MEDIANA", "ESTAVEL_DEPOIS")}
+    arq = saida / "cortes.json"
+    if arq.is_file():
+        reg = json.loads(arq.read_text(encoding="utf-8"))
+        if reg.get("video_sha1") == video_sha1 and reg.get("regra") == regra:
+            return reg["cortes"]
+    cortes, _ = tomadas.acha_cortes(video, info["fps"], cv2)
+    arq.write_text(json.dumps({"video_sha1": video_sha1, "regra": regra, "cortes": cortes}, indent=1), encoding="utf-8")
+    return cortes
+
+
+def recorta_deteccao(arq_csv, det, q0, q1, arq_tomada, pasta, chave):
+    """Grava, na pasta da tomada, as caixas dos quadros q0 a q1 - 1 renumeradas a partir de 0, com o registro que faz o
+    comando reaproveitá-las. A tomada tem os mesmos quadros do vídeo (gravada sem perda), então o detector daria as
+    mesmas caixas."""
+    pasta.mkdir(parents=True, exist_ok=True)
+    destino, caixas = pasta / "deteccoes.csv", 0
+    with open(arq_csv, newline="", encoding="utf-8") as f, open(destino, "w", newline="", encoding="utf-8") as g:
+        r, w = csv.reader(f), csv.writer(g)
+        w.writerow(next(r))
+        for linha in r:
+            q = int(linha[0])
+            if q0 <= q < q1:
+                w.writerow([q - q0] + linha[1:])
+                caixas += 1
+    reg = dict(det, **chave, video_sha1=sha1(arq_tomada), video_bytes=arq_tomada.stat().st_size, quadros=q1 - q0,
+               video=arq_tomada.name, quadros_lidos=q1 - q0, caixas=caixas, csv_sha1=sha1(destino),
+               origem=f"quadros {q0} a {q1 - 1} da detecção do vídeo inteiro")
+    reg.pop("refeita_nesta_execucao", None)
+    (pasta / "deteccoes.json").write_text(json.dumps(reg, ensure_ascii=False, indent=1), encoding="utf-8")
+
+
+def roda_por_tomada(a, video, cortes, info, saida, detector, contador, arq_csv, det, chave, cv2):
+    """Separa as tomadas, roda este comando em cada uma (com --tomada-unica e a detecção recortada) e junta as tabelas."""
+    import subprocess
+    import tomadas
+    fps = info["fps"]
+    print(f"troca de câmera em {len(cortes)} ponto(s): " + ", ".join(f"{q / fps:.2f} s" for q in cortes)
+          + f" | cada tomada é contada separada; as de menos de {tomadas.TOMADA_MINIMA_S:.0f} s ficam de fora", flush=True)
+    trechos = tomadas.separa(video, cortes, info["n_frames"], fps, saida / "tomadas", cv2)
+    python = ([sys.executable] + (["-I"] if sys.flags.isolated else []) + (["-B"] if sys.flags.dont_write_bytecode else [])
+              + (["-X", "utf8"] if sys.flags.utf8_mode else []))
+    fixos = {k: chave[k] for k in ("detector_sha1", "imgsz", "rastreamento_sha1")}
+    linhas, bracadas, instantes = [], [], []
+    for k, (arq, q0, q1) in enumerate(trechos, 1):
+        linha = {"tomada": k, "inicio_s": round(q0 / fps, 3), "fim_s": round(q1 / fps, 3), "quadros": q1 - q0}
+        if arq is None:
+            linhas.append(dict(linha, situacao="curta demais, não contada"))
+            continue
+        pasta = saida / f"tomada_{k:02d}"
+        recorta_deteccao(arq_csv, det, q0, q1, arq, pasta, fixos)
+        print(f"\n===== tomada {k} de {len(trechos)}: {q0 / fps:.2f} a {q1 / fps:.2f} s =====", flush=True)
+        cmd = python + [str(AQUI / "roda_video.py"), str(arq), "--tomada-unica", "--saida", str(pasta),
+                        "--detector", str(detector), "--contador", str(contador), "--nado", a.nado]
+        cmd += ["--nadadores", str(a.nadadores)] if a.nadadores else []
+        cmd += ["--sem-video"] if a.sem_video else []
+        if subprocess.run(cmd).returncode != 0:
+            linhas.append(dict(linha, situacao="falhou (veja a mensagem acima)", pasta=str(pasta)))
+            continue
+        r = json.loads((pasta / "resumo.json").read_text(encoding="utf-8"))
+        linhas.append(dict(linha, situacao="contada", nadadores=r["nadadores"], origem_do_numero=r["nadadores_origem"], pasta=str(pasta)))
+        for l in r["raias"]:
+            bracadas.append(dict({"tomada": k, "inicio_da_tomada_s": linha["inicio_s"]},
+                                 **{c: v for c, v in l.items() if c not in ("video", "instantes_s")}))
+            instantes += [[k, l["raia"], l["usou"], j + 1, f"{t:.3f}", f"{t + q0 / fps:.3f}"] for j, t in enumerate(l["instantes_s"])]
+    campos = ["tomada", "inicio_s", "fim_s", "quadros", "situacao", "nadadores", "origem_do_numero", "pasta"]
+    with open(saida / "tomadas.csv", "w", newline="", encoding="utf-8") as f:
+        w = csv.DictWriter(f, fieldnames=campos)
+        w.writeheader()
+        w.writerows(linhas)
+    if bracadas:
+        with open(saida / "bracadas_por_tomada.csv", "w", newline="", encoding="utf-8") as f:
+            w = csv.DictWriter(f, fieldnames=list(bracadas[0]))
+            w.writeheader()
+            w.writerows(bracadas)
+        with open(saida / "instantes_por_tomada.csv", "w", newline="", encoding="utf-8") as f:
+            w = csv.writer(f)
+            w.writerow(["tomada", "raia", "contador", "numero", "tempo_na_tomada_s", "tempo_no_video_s"])
+            w.writerows(instantes)
+    aviso = ("a numeração das raias vale dentro de cada tomada: o sistema não sabe se a raia 3 de uma tomada é o mesmo "
+             "nadador da raia 3 de outra")
+    (saida / "resumo.json").write_text(json.dumps({
+        "feito_por": "roda_video.py (sistema final do TCC)", "quando": time.strftime("%Y-%m-%d %H:%M:%S"),
+        "video": str(video), "cortes_quadros": cortes, "cortes_s": [round(q / fps, 3) for q in cortes],
+        "tomadas": linhas, "avisos": [aviso]}, ensure_ascii=False, indent=1), encoding="utf-8")
+    print("\n===== tomadas =====")
+    for l in linhas:
+        extra = f" | {l['nadadores']} nadadores ({l['origem_do_numero']})" if "nadadores" in l else ""
+        print(f"tomada {l['tomada']}: {l['inicio_s']:.2f} a {l['fim_s']:.2f} s | {l['situacao']}{extra}")
+    print("AVISO: " + aviso)
+    print(f"resultados em: {saida} (tomadas.csv, bracadas_por_tomada.csv e uma pasta por tomada)")
+    return 0
 
 
 def roda_detector(video, n_frames, arq_csv, arq_json, detector, chave, refaz, R, cv2):
@@ -136,11 +234,11 @@ def main():
         para(f"não achei o vídeo: {video}")
     if not detector.is_file():
         para(f"não achei os pesos do detector: {detector}\n      Copie o arquivo para lá ou passe --detector CAMINHO.")
+    if a.nadadores is not None and a.nadadores < 1:
+        para("--nadadores tem de ser 1 ou mais.")
     if not a.so_deteccao:
-        if a.nadadores is None or a.nado is None:
-            para("faltou dizer --nadadores N e --nado crawl|borboleta (os dois são informados, não são detectados).")
-        if a.nadadores < 1:
-            para("--nadadores tem de ser 1 ou mais.")
+        if a.nado is None:
+            para("faltou dizer --nado crawl|borboleta (o nado é informado, não é reconhecido).")
         if not contador.is_file():
             para(f"não achei os pesos da rede de contagem: {contador}")
     saida = Path(a.saida).resolve() if a.saida else AQUI / "saidas" / video.stem
@@ -199,8 +297,35 @@ def main():
         print(f"só a detecção foi pedida. Guardada em {arq_csv}")
         return 0
 
+    # troca de câmera: com mais de um nadador, cada tomada é contada separada; com um só, não há quem confundir
+    import tomadas
+    estimado = tomadas.estima_nadadores(arq_csv, info["n_frames"])
+    cortes = []
+    if not a.tomada_unica:
+        cortes = cortes_do_video(video, chave["video_sha1"], info, saida, cv2)
+        if cortes and (a.nadadores if a.nadadores is not None else estimado) != 1:
+            return roda_por_tomada(a, video, cortes, info, saida, detector, contador, arq_csv, det, chave, cv2)
+        if cortes:
+            fps = info["fps"]
+            print("troca de câmera em " + ", ".join(f"{q / fps:.2f} s" for q in cortes) + "; com um nadador só, "
+                  "o vídeo é contado inteiro", flush=True)
+        else:
+            print("troca de câmera: nenhuma", flush=True)
+
+    # número de nadadores: o informado ou, sem ele, o estimado pelas caixas
+    if a.nadadores is None:
+        if estimado < 1:
+            para("o detector não achou nadadores na maior parte dos quadros; se houver, informe --nadadores N.")
+        origem = "estimado"
+        print(f"nadadores: {estimado}, estimado (caixas por quadro com confiança de pelo menos {tomadas.CONF_NADADORES}). "
+              "Confira no vídeo; se estiver errado, rode de novo com --nadadores N (a detecção é reaproveitada).", flush=True)
+    else:
+        origem = "informado"
+        if estimado != a.nadadores:
+            avisa(f"foram informados {a.nadadores} nadadores, mas o detector acha {estimado} na maior parte dos quadros; confira")
+
     # 2 e 3. rastreamento, um nadador por raia
-    n, n_frames = a.nadadores, info["n_frames"]
+    n, n_frames = (a.nadadores if a.nadadores is not None else estimado), info["n_frames"]
     t0 = time.perf_counter()
     raias, eixo, ids, exato_antes = rastreia(arq_csv, n, n_frames, R)
     trilhas = {}
@@ -280,7 +405,8 @@ def main():
         "codigo_sha1": {p.name: sha1(p) for p in sorted(AQUI.glob("*.py"))},      # com que arquivos este resultado foi feito
         "video": {"arquivo": str(video), "sha1": chave["video_sha1"], "bytes": chave["video_bytes"], "quadros": n_frames,
                   "fps": info["fps"], "largura": info["w"], "altura": info["h"], "duracao_s": round(n_frames / info["fps"], 2)},
-        "nadadores": n, "nado": a.nado,
+        "nadadores": n, "nadadores_origem": origem, "nadadores_estimado": estimado, "nado": a.nado,
+        "trocas_de_camera_s": [round(q / info["fps"], 3) for q in cortes],
         "parametros": {k: getattr(R, k) for k in ("IMGSZ", "DET_CONF", "TRACK_ACTIVATION", "MATCH_THRESHOLD", "LOST_BUFFER", "LACUNA_MAX",
                                                   "CICLOS_MAX", "CORTE_RITMO", "PORTA_NADO")},
         "pesos": {"detector": {"arquivo": str(detector), "sha1": sha_det, "e_o_da_medida": sha_det in DETECTORES_DA_MEDIDA},

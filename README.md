@@ -19,10 +19,10 @@ No crawl cada braço conta uma braçada. Na borboleta, cada ciclo.
 ```
 cd sistema_final
 pip install -r requirements.txt   # antes, instale o torch indicado para a sua máquina (pytorch.org)
-python roda_video.py prova.mp4 --nadadores 8 --nado crawl
+python roda_video.py prova.mp4 --nado crawl
 ```
 
-O resultado sai em `sistema_final/saidas/`: uma tabela com a contagem de cada raia, o instante de cada braçada e o vídeo com as caixas e a contagem desenhadas. Os detalhes estão no [LEIA-ME do sistema](sistema_final/LEIA-ME.md).
+O sistema estima quantos nadadores aparecem (dá para informar com `--nadadores 8`) e, se o vídeo tiver troca de câmera, conta cada tomada separada. O resultado sai em `sistema_final/saidas/`: uma tabela com a contagem de cada raia, o instante de cada braçada e o vídeo com as caixas e a contagem desenhadas. Os detalhes estão no [LEIA-ME do sistema](sistema_final/LEIA-ME.md).
 
 ## Como foi o resultado
 
@@ -58,6 +58,5 @@ A primeira versão do projeto, que tentava contar as braçadas pela estimativa d
 ## Limites
 
 - Só crawl e borboleta.
-- Quem roda informa o nado e o número de nadadores.
-- Cada vídeo precisa ser uma tomada só, sem troca de câmera, em velocidade real.
-- Os números acima vêm de poucos vídeos. O texto do TCC traz cada medida com as suas ressalvas.
+- Quem roda informa o nado. O número de nadadores é estimado e deve ser conferido: ele erra quando um nadador fica escondido na maior parte do vídeo.
+- Com troca de câmera, cada tomada é contada à parte. O sistema não reconhece o mesmo nadador de uma tomada para outra.
