@@ -1,0 +1,9 @@
+# Versões com que o sistema foi medido em 15/11/2026: as mesmas no notebook de trabalho (CPU, Python 3.12) e no PC de
+# treino (GPU, Python 3.13), segundo o registro de ambiente de cada medida (do OpenCV o registro
+# guarda só 5.0.0). O torch depende da máquina: 2.15.0+cpu aqui e 2.14.1+cu126 no PC de treino. Instale
+# antes o torch indicado para a sua placa em pytorch.org; depois, pip install -r requirements.txt.
+numpy==2.5.4
+opencv-python==5.0.0.93
+scipy==1.18.1
+ultralytics==8.4.211
+supervision==0.30.9

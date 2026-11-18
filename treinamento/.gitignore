@@ -1,0 +1,5 @@
+# o que os scripts de treino geram ou leem de fora do repositório
+saidas/
+base_teste/
+repo/
+__pycache__/

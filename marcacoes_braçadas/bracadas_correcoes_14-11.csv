@@ -1,0 +1,3 @@
+arquivo,raia,tempo_s,origem
+bracadas_natacao_teste_08.csv,8,0.000,"João em 14/11 (2h30): são 18, faltou marcar uma braçada no início do vídeo. No primeiro quadro o braço já está estendido na água; instante posto em 0,00 s."
+bracadas_natacao_teste_4_c3.csv,8,0.170,"João em 14/11 (2h30): são 10, provavelmente faltou uma no começo. Instante estimado, não marcado no vídeo: marca seguinte (0,69 s) menos o intervalo típico do nadador (0,52 s); a rede, sem ter visto o vídeo, tem um pico em 0,13 s."

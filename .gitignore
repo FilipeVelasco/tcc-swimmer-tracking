@@ -6,3 +6,7 @@ data/
 runs/
 __pycache__/
 .venv/
+outputs*/
+
+# pesos do sistema final, que sobem junto com o código
+!sistema_final/*.pt
